@@ -48,17 +48,17 @@ void fragment() {
 	vec3 scene = texture(screen_texture, uv).rgb;
 	vec3 blurred = textureLod(screen_texture, uv, 2.5).rgb;
 	float vignette = smoothstep(0.2, 0.8, length(centered));
-	vec3 purple = mix(vec3(0.08, 0.025, 0.16), vec3(0.38, 0.16, 0.53), turbulence);
-	vec3 haze = mix(blurred * vec3(0.55, 0.4, 0.68), purple, 0.72);
-	haze *= 1.0 - vignette * 0.3;
+	vec3 mist = mix(vec3(0.60, 0.61, 0.62), vec3(0.90, 0.91, 0.92), turbulence);
+	vec3 haze = mix(blurred * vec3(0.78), mist, 0.72);
+	haze *= 1.0 - vignette * 0.16;
 	vec3 color = mix(scene, haze, coverage);
 	if (transition_mode != 0) {
 		vec3 base = transition_mode == 1 ? haze : scene;
 		float cover = transition_mode == 1 ? coverage : 1.0 - coverage;
-		vec3 veil = purple * (1.0 - vignette * 0.3);
+		vec3 veil = mist * (1.0 - vignette * 0.16);
 		color = mix(base, veil, cover);
 	}
 	float vapor = smoothstep(0.36, 0.68, turbulence * 0.55 + curls * 0.6);
-	color += vec3(0.3, 0.14, 0.4) * gust * vapor * 0.8;
+	color += vec3(0.2) * gust * vapor * 0.8;
 	COLOR = vec4(color, COLOR.a);
 }
