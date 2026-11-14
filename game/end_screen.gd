@@ -2,6 +2,7 @@ extends CanvasLayer
 
 const CardData = preload("res://cards/card_data.gd")
 const GameState = preload("res://game/game_state.gd")
+const Text = preload("res://data/text.gd")
 const CARD_SCENE: PackedScene = preload("res://cards/card.tscn")
 const HERD_SCALE := 2.0
 
@@ -43,7 +44,7 @@ func _ready() -> void:
 	hint.add_theme_color_override("font_outline_color", Color.BLACK)
 	hint.add_theme_constant_override("outline_size", 5)
 	hint.add_theme_font_size_override("font_size", 22)
-	hint.text = "Pressione R para reiniciar"
+	hint.text = Text.get_text("restart_hint")
 	panel.add_child(hint)
 	hint.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 	hint.offset_left = -220.0
@@ -55,7 +56,7 @@ func _ready() -> void:
 func show_result(outcome: GameState.Outcome, remaining_enemies: Array[CardData]) -> void:
 	result = outcome
 	enemies = remaining_enemies
-	title.text = "VITÓRIA!" if outcome == GameState.Outcome.WON else "DERROTA"
+	title.text = Text.get_text("victory") if outcome == GameState.Outcome.WON else Text.get_text("defeat")
 	panel.show()
 	if outcome == GameState.Outcome.LOST:
 		_spawn_herd()

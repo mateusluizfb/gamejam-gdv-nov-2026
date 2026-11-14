@@ -3,6 +3,7 @@ extends RefCounted
 
 const CardData = preload("res://cards/card_data.gd")
 const PlayerData = preload("res://game/player_data.gd")
+const Text = preload("res://data/text.gd")
 
 enum Phase { IDLE, TARGETING, RESOLVING, FINISHED }
 enum Outcome { IN_PROGRESS, WON, LOST }
@@ -71,7 +72,7 @@ func play_card(card: CardData, cell: Vector2i) -> bool:
 	if not _valid_placement(card, cell):
 		return false
 	if card.type in [CardData.Type.AXE, CardData.Type.SPEAR] and not _has_enemies():
-		feedback.emit("Não há inimigos disponíveis como alvo.")
+		feedback.emit(Text.get_text("feedback_no_enemies"))
 		return false
 	pending_hand_index = player.hand.find(card)
 	player.hand.erase(card)
@@ -86,11 +87,11 @@ func play_card(card: CardData, cell: Vector2i) -> bool:
 		CardData.Type.AXE:
 			pending_damage = (CardData.AXE_BOTTOM_DAMAGE if cell.y == 3 else CardData.AXE_UPPER_DAMAGE) + damage_bonus
 			phase = Phase.TARGETING
-			feedback.emit("Selecione um inimigo para o Machado (%d de dano). Esc cancela." % pending_damage)
+			feedback.emit(Text.get_text("feedback_target_axe") % pending_damage)
 		CardData.Type.SPEAR:
 			pending_damage = (CardData.SPEAR_BOTTOM_DAMAGE if cell.y == 3 else CardData.SPEAR_UPPER_DAMAGE) + damage_bonus
 			phase = Phase.TARGETING
-			feedback.emit("Selecione um inimigo para a Lança (%d de dano). Esc cancela." % pending_damage)
+			feedback.emit(Text.get_text("feedback_target_spear") % pending_damage)
 		CardData.Type.TRAP:
 			pending_damage = CardData.TRAP_DAMAGE + damage_bonus
 			_start_effect()
@@ -125,13 +126,13 @@ func cancel_play() -> bool:
 	_reset_pending()
 	card_returned.emit(card, pending_hand_index, cell)
 	changed.emit()
-	feedback.emit("Carta devolvida à mão; ataques pendentes desfeitos.")
+	feedback.emit(Text.get_text("feedback_cancel"))
 	return true
 
 func _start_effect() -> void:
 	phase = Phase.RESOLVING
 	effect_token += 1
-	feedback.emit("Aplicando efeito de %s..." % pending_card.display_name())
+	feedback.emit(Text.get_text("feedback_applying") % pending_card.display_name())
 	effect_started.emit(effect_token)
 
 func resolve_effect(token: int) -> void:
@@ -143,7 +144,7 @@ func resolve_effect(token: int) -> void:
 		CardData.Type.MAGIC:
 			damage_bonus += CardData.MAGIC_BONUS
 			magic_applied.emit()
-			message = "Magia: +%d de dano ao próximo ataque (total +%d)." % [CardData.MAGIC_BONUS, damage_bonus]
+			message = Text.get_text("feedback_magic") % [CardData.MAGIC_BONUS, damage_bonus]
 		CardData.Type.TRAP:
 			damage_bonus = 0
 			var row: int = card.board_position.y
@@ -153,7 +154,7 @@ func resolve_effect(token: int) -> void:
 				if target != null and target.owner == CardData.Owner.ENEMY:
 					set_card_hp(target, target.current_hp - pending_damage)
 					hits += 1
-			message = "Armadilha: %d de dano a %d inimigos na linha %d." % [pending_damage, hits, row + 1]
+			message = Text.get_text("feedback_trap") % [pending_damage, hits, row + 1]
 			_remove_board_card(card)
 		CardData.Type.AXE, CardData.Type.SPEAR:
 			var target := pending_target
@@ -170,16 +171,16 @@ func resolve_effect(token: int) -> void:
 				axe_attacked.emit()
 			else:
 				spear_attacked.emit()
-			message = "%s: %d de dano (PV do alvo: %d)." % [card.display_name(), pending_damage, target.current_hp]
+			message = Text.get_text("feedback_attack") % [card.display_name(), pending_damage, target.current_hp]
 			if card.type == CardData.Type.AXE and target.current_hp <= 0 and _has_enemies():
 				pending_target = null
 				phase = Phase.TARGETING
 				changed.emit()
-				feedback.emit(message + " Selecione outro inimigo; Esc desfaz a jogada.")
+				feedback.emit(message + Text.get_text("feedback_axe_continue"))
 				return
 			if card.type == CardData.Type.SPEAR and target.current_hp > 0:
 				if not _move_enemy_to_other_row(target):
-					message += " A outra linha inimiga está cheia; o alvo permanece."
+					message += Text.get_text("feedback_spear_full")
 	_reset_pending()
 	changed.emit()
 	feedback.emit(message)

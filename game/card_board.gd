@@ -79,6 +79,12 @@ func center_x() -> float:
 
 func draw_row_highlight(row: int) -> void:
 	var rect := Rect2(cell_position(Vector2i(0, row)) - cell_size / 2.0, Vector2(cards[row].size() * cell_size.x, cell_size.y))
+	_draw_placement_highlight(rect)
+
+func draw_placement_cell(cell: Vector2i) -> void:
+	_draw_placement_highlight(Rect2(cell_position(cell) - cell_size / 2.0, cell_size))
+
+func _draw_placement_highlight(rect: Rect2) -> void:
 	container.draw_rect(rect, Color(0.3, 0.6, 1.0, 0.22))
 	container.draw_rect(rect, Color(0.3, 0.6, 1.0, 0.9), false, 2.0)
 

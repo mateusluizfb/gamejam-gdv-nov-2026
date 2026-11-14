@@ -3,6 +3,7 @@ extends Node2D
 signal movement_updated
 
 const CardData = preload("res://cards/card_data.gd")
+const Text = preload("res://data/text.gd")
 const WATER_SHADER = preload("res://cards/card.gdshader")
 const BONUS_COLOR := Color(0.13, 0.21, 0.45, 0.95)
 const PENALTY_COLOR := Color(0.5, 0.12, 0.1, 0.95)
@@ -55,19 +56,19 @@ func refresh() -> void:
 		name_label.text = data.display_name()
 		match data.type:
 			CardData.Type.ELEPHANT:
-				category_label.text = "INIMIGO"
+				category_label.text = Text.get_text("category_enemy")
 			CardData.Type.MAGIC:
-				category_label.text = "MAGIA"
+				category_label.text = Text.get_text("category_magic")
 			CardData.Type.TRAP:
-				category_label.text = "ARMADILHA"
+				category_label.text = Text.get_text("category_trap")
 			_:
-				category_label.text = "ATAQUE"
-		hp_label.text = "PV: %d" % data.current_hp
+				category_label.text = Text.get_text("category_attack")
+		hp_label.text = Text.get_text("card_hp") % data.current_hp
 		var penalty := _row_penalty()
 		bonus_label.visible = damage_bonus > 0 or penalty > 0
 		bonus_background.visible = bonus_label.visible
 		bonus_background.color = PENALTY_COLOR if penalty > 0 else BONUS_COLOR
-		bonus_label.text = "-%d DANO" % penalty if penalty > 0 else "+%d DANO" % damage_bonus
+		bonus_label.text = Text.get_text("card_damage_penalty") % penalty if penalty > 0 else Text.get_text("card_damage_bonus") % damage_bonus
 		var font_size := 13
 		var font := bonus_label.get_theme_font("font")
 		while font_size > 1 and font.get_string_size(bonus_label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x > bonus_background.size.x:

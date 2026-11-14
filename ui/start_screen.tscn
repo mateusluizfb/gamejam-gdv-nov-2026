@@ -49,7 +49,6 @@ offset_right = 42.71991
 offset_bottom = 11.119995
 grow_horizontal = 2
 grow_vertical = 2
-text = "Novo jogo"
 
 [node name="AudioStreamPlayer2D" type="AudioStreamPlayer2D" parent="." unique_id=357792844]
 stream = ExtResource("3_nledq")
@@ -84,7 +83,6 @@ theme_override_colors/font_color = Color(1, 0.94, 0.85, 1)
 theme_override_colors/font_outline_color = Color(0.08, 0.02, 0.14, 1)
 theme_override_constants/outline_size = 5
 theme_override_font_sizes/font_size = 34
-text = "Para finalizar o monumento seus guerreiros precisam passar pelos elefantes para buscar o marfim restante"
 horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 2
@@ -102,7 +100,6 @@ theme_override_colors/font_color = Color(0.91, 0.79, 1, 1)
 theme_override_colors/font_outline_color = Color(0.08, 0.02, 0.14, 1)
 theme_override_constants/outline_size = 4
 theme_override_font_sizes/font_size = 22
-text = "Pressione espaço para continuar"
 horizontal_alignment = 1
 vertical_alignment = 1
 

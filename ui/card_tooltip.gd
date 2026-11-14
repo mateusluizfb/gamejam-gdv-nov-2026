@@ -2,6 +2,7 @@ extends PanelContainer
 
 const CardData = preload("res://cards/card_data.gd")
 const CardView = preload("res://cards/card.gd")
+const Text = preload("res://data/text.gd")
 
 const GAP := 8.0
 
@@ -27,6 +28,7 @@ func set_hovered(card: CardView, damage_bonus: int) -> void:
 func refresh() -> void:
 	if is_node_ready() and visible and is_instance_valid(hovered_card):
 		text_label.text = _description(hovered_card.data, bonus)
+		size = Vector2.ZERO
 		_position_tooltip()
 
 func _on_hover_timer_timeout() -> void:
@@ -34,7 +36,7 @@ func _on_hover_timer_timeout() -> void:
 		set_hovered(null, 0)
 		return
 	text_label.text = _description(hovered_card.data, bonus)
-	size = get_combined_minimum_size()
+	size = Vector2.ZERO
 	_position_tooltip()
 	show()
 
@@ -57,12 +59,17 @@ func _position_tooltip() -> void:
 	var left: float = corners[0].x
 	var right: float = left
 	var top: float = corners[0].y
+	var bottom: float = top
 	for corner in corners:
 		left = minf(left, corner.x)
 		right = maxf(right, corner.x)
 		top = minf(top, corner.y)
+		bottom = maxf(bottom, corner.y)
 	var viewport := get_viewport_rect()
-	var desired := Vector2((left + right - size.x) / 2.0, top - size.y - GAP)
+	var x := left - size.x - GAP
+	if x < viewport.position.x:
+		x = right + GAP
+	var desired := Vector2(x, (top + bottom - size.y) / 2.0)
 	position = Vector2(
 		clampf(desired.x, viewport.position.x, maxf(viewport.position.x, viewport.end.x - size.x)),
 		clampf(desired.y, viewport.position.y, maxf(viewport.position.y, viewport.end.y - size.y))
@@ -72,23 +79,23 @@ func _description(card: CardData, damage_bonus: int) -> String:
 	var description := "[b]%s[/b]\n" % card.display_name()
 	match card.type:
 		CardData.Type.ELEPHANT:
-			description += "Carta inimiga.\nPV: %s." % _highlight(card.current_hp)
+			description += Text.get_text("tooltip_elephant") % _highlight(card.current_hp)
 		CardData.Type.AXE:
-			description += "Escolha um inimigo.\nDano: %s (linha 3) / %s (linha 4).\nSe morrer, ataque outro inimigo." % [
+			description += Text.get_text("tooltip_axe") % [
 				_highlight(CardData.AXE_UPPER_DAMAGE + damage_bonus),
 				_highlight(CardData.AXE_BOTTOM_DAMAGE + damage_bonus)
 			]
 		CardData.Type.SPEAR:
-			description += "Escolha um inimigo.\nDano: %s (linha 3) / %s (linha 4).\nSe sobreviver, mova-o para a outra linha inimiga, se houver espaço." % [
+			description += Text.get_text("tooltip_spear") % [
 				_highlight(CardData.SPEAR_UPPER_DAMAGE + damage_bonus),
 				_highlight(CardData.SPEAR_BOTTOM_DAMAGE + damage_bonus)
 			]
 		CardData.Type.TRAP:
-			description += "Escolha uma linha inimiga.\nCause %s de dano em cada inimigo e remova esta carta." % _highlight(CardData.TRAP_DAMAGE + damage_bonus)
+			description += Text.get_text("tooltip_trap") % _highlight(CardData.TRAP_DAMAGE + damage_bonus)
 		CardData.Type.MAGIC:
-			description += "A próxima carta de ataque causa %s de dano extra. Bônus acumulam." % _highlight(CardData.MAGIC_BONUS)
+			description += Text.get_text("tooltip_magic") % _highlight(CardData.MAGIC_BONUS)
 	if damage_bonus > 0 and card.type in [CardData.Type.AXE, CardData.Type.SPEAR, CardData.Type.TRAP]:
-		description += "\nBônus de magia: +%s." % _highlight(damage_bonus)
+		description += Text.get_text("tooltip_bonus") % _highlight(damage_bonus)
 	return description
 
 func _highlight(value: int) -> String:

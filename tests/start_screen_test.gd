@@ -1,5 +1,7 @@
 extends SceneTree
 
+const Text = preload("res://data/text.gd")
+
 var failed := false
 
 func _initialize() -> void:
@@ -19,10 +21,14 @@ func _key(keycode: Key, echo: bool = false) -> InputEventKey:
 
 func _run() -> void:
 	var scene: Node = load("res://ui/start_screen.tscn").instantiate()
+	var original_button := Text.get_text("menu_new_game")
+	Text.config.set_value("text", "menu_new_game", "Menu editado")
 	root.add_child(scene)
 	current_scene = scene
 	var intro = scene.get_node("Intro")
 	var button := scene.get_node("Button") as Button
+	_check(button.text == "Menu editado", "Menu text should come from the editable text file.")
+	Text.config.set_value("text", "menu_new_game", original_button)
 	var background := intro.get_node("Background") as ColorRect
 	var story := intro.get_node("Story") as Label
 	var prompt := intro.get_node("Prompt") as Label

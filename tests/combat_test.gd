@@ -2,6 +2,7 @@ extends SceneTree
 
 const CardData = preload("res://cards/card_data.gd")
 const GameState = preload("res://game/game_state.gd")
+const Text = preload("res://data/text.gd")
 
 var failed := false
 
@@ -236,6 +237,13 @@ func _test_row_highlight() -> void:
 	var offset := Vector2(6, 4)
 	var axe: Node2D = manager.hand_layout.cards[0]
 	_button(manager, transform * (manager.to_local(axe.global_position) + offset), true)
+	_check(manager.valid_placement_cells.size() == 8 and Vector2i(0, 2) in manager.valid_placement_cells and Vector2i(3, 3) in manager.valid_placement_cells and Vector2i(2, 0) not in manager.valid_placement_cells, "Holding an Axe should show every open player cell, but no enemy cells.")
+	manager.state.board[2][0] = _card(CardData.Type.MAGIC)
+	manager.state.changed.emit()
+	_check(Vector2i(0, 2) not in manager.valid_placement_cells, "Occupied cells should not be shown as valid placements.")
+	manager.state.board[2][0] = null
+	manager.state.changed.emit()
+	_check(Vector2i(0, 2) in manager.valid_placement_cells, "Placement hints should update when the board changes.")
 	_motion(manager, transform * (manager.board.cell_position(Vector2i(1, 2)) + offset))
 	_check(manager.highlighted_row == 2, "A valid upper player row should be highlighted.")
 	_motion(manager, transform * (manager.board.cell_position(Vector2i(2, 3)) + offset))
@@ -243,13 +251,14 @@ func _test_row_highlight() -> void:
 	_motion(manager, transform * (manager.board.cell_position(Vector2i(2, 0)) + offset))
 	_check(manager.highlighted_row == -1, "An Axe cannot highlight an enemy row.")
 	_motion(manager, transform * (Vector2.ZERO + offset))
-	_check(manager.highlighted_row == -1, "Dragging outside the grid should clear the highlight.")
+	_check(manager.highlighted_row == -1 and manager.valid_placement_cells.size() == 8, "Dragging outside the grid should retain valid placement hints without a drop preview.")
 	_motion(manager, transform * (manager.board.cell_position(Vector2i(0, 2)) + offset))
 	_escape(manager)
-	_check(manager.highlighted_row == -1 and manager.state.player.hand.has(axe.data), "Canceling a drag should clear the highlight.")
+	_check(manager.highlighted_row == -1 and manager.valid_placement_cells.is_empty() and manager.state.player.hand.has(axe.data), "Canceling a drag should clear all highlights.")
 
 	var trap: Node2D = manager.hand_layout.cards[-1]
 	_button(manager, transform * (manager.to_local(trap.global_position) + offset), true)
+	_check(manager.valid_placement_cells.size() == 5 and Vector2i(2, 0) in manager.valid_placement_cells and Vector2i(0, 1) in manager.valid_placement_cells and Vector2i(0, 0) not in manager.valid_placement_cells and Vector2i(0, 2) not in manager.valid_placement_cells, "Holding a Trap should show only unoccupied enemy cells.")
 	_motion(manager, transform * (manager.board.cell_position(Vector2i(0, 0)) + offset))
 	_check(manager.highlighted_row == -1, "An occupied enemy cell should not be highlighted.")
 	_motion(manager, transform * (manager.board.cell_position(Vector2i(2, 0)) + offset))
@@ -260,7 +269,7 @@ func _test_row_highlight() -> void:
 	_check(manager.highlighted_row == -1, "A Trap cannot highlight a player row.")
 	_motion(manager, transform * (manager.board.cell_position(Vector2i(2, 0)) + offset))
 	_button(manager, transform * (manager.board.cell_position(Vector2i(2, 0)) + offset), false)
-	_check(manager.highlighted_row == -1 and manager.state.board[0][2] == trap.data, "Dropping should clear the highlight and play the card.")
+	_check(manager.highlighted_row == -1 and manager.valid_placement_cells.is_empty() and manager.state.board[0][2] == trap.data, "Dropping should clear all highlights and play the card.")
 	scene.free()
 
 func _test_row_penalty_badges() -> void:
@@ -1001,17 +1010,32 @@ func _test_tooltips() -> void:
 	_check(not tooltip.visible, "Changing cards should restart the tooltip delay.")
 	await create_timer(0.15).timeout
 	_check(tooltip.visible and text.text.contains("Lança"), "Hovering a hand card should show its tooltip after the delay.")
-	_check(text.text.contains("]1[/color] (linha 3)") and text.text.contains("]2[/color] (linha 4)"), "Spear tooltip should show both row damage values.")
+	_check(text.text.contains("]1[/color] de dano a um inimigo se esta carta estiver na linha 3") and text.text.contains("]2[/color] na linha 4"), "Spear tooltip should show both row damage values and identify the attacking card's row.")
+	var sprite := spear.get_node("Sprite2D") as Sprite2D
+	var sprite_rect := sprite.get_rect()
+	var sprite_transform := sprite.get_global_transform_with_canvas()
+	var left := minf(
+		minf((sprite_transform * sprite_rect.position).x, (sprite_transform * Vector2(sprite_rect.end.x, sprite_rect.position.y)).x),
+		minf((sprite_transform * sprite_rect.end).x, (sprite_transform * Vector2(sprite_rect.position.x, sprite_rect.end.y)).x)
+	)
+	_check(tooltip.get_global_rect().end.x <= left and tooltip.size.x < 300.0, "Tooltip should be smaller and appear to the left of the rotated card.")
+
+	var original_description := Text.get_text("tooltip_spear")
+	Text.config.set_value("text", "tooltip_spear", "Dano editado: %s / %s.")
+	tooltip.refresh()
+	_check(text.text.contains("Dano editado:"), "Tooltip text should come from the editable text file.")
+	Text.config.set_value("text", "tooltip_spear", original_description)
+	tooltip.refresh()
 
 	manager.state.damage_bonus = 2
 	manager.state.changed.emit()
 	await process_frame
 	await process_frame
-	_check(text.text.contains("]3[/color] (linha 3)") and text.text.contains("]4[/color] (linha 4)") and text.text.contains("Bônus de magia"), "An open tooltip should update damage and bonus when Magic changes.")
+	_check(text.text.contains("]3[/color] de dano") and text.text.contains("]4[/color] na linha 4") and text.text.contains("Bônus de magia"), "An open tooltip should update damage and bonus when Magic changes.")
 	_check(text.get_content_height() <= text.size.y, "Tooltip text must fit without clipping.")
-	_check(tooltip._description(axe.data, 2).contains("]6[/color] (linha 3)") and tooltip._description(axe.data, 2).contains("]4[/color] (linha 4)"), "Axe tooltip should include its bonus on both rows.")
+	_check(tooltip._description(axe.data, 2).contains("]6[/color] de dano") and tooltip._description(axe.data, 2).contains("]4[/color] na linha 4"), "Axe tooltip should include its bonus on both rows.")
 	_check(tooltip._description(trap.data, 2).contains("]7[/color] de dano"), "Trap tooltip should include the active bonus.")
-	_check(tooltip._description(magic.data, 2).contains("Bônus acumulam"), "Magic tooltip should explain stacking.")
+	_check(tooltip._description(magic.data, 2).contains("incluindo Armadilha") and tooltip._description(magic.data, 2).contains("acumulam esse bônus"), "Magic tooltip should explain trap bonuses and stacking.")
 
 	manager.state.damage_bonus = 100
 	manager.state.changed.emit()
@@ -1037,6 +1061,9 @@ func _test_tooltips() -> void:
 	var bounds: Rect2 = root.get_visible_rect()
 	var tooltip_rect: Rect2 = tooltip.get_global_rect()
 	_check(tooltip_rect.position.x >= bounds.position.x and tooltip_rect.position.y >= bounds.position.y and tooltip_rect.end.x <= bounds.end.x and tooltip_rect.end.y <= bounds.end.y, "Tooltip should stay inside the viewport near the top-left edge.")
+	var enemy_sprite := enemy.get_node("Sprite2D") as Sprite2D
+	var enemy_right := (enemy_sprite.get_global_transform_with_canvas() * enemy_sprite.get_rect().end).x
+	_check(tooltip_rect.position.x >= enemy_right, "Tooltip should move to the right when the left side has no room.")
 	manager.position = Vector2(700, 500)
 	await process_frame
 	tooltip_rect = tooltip.get_global_rect()
@@ -1053,7 +1080,7 @@ func _test_tooltips() -> void:
 	_check(manager.state.phase == GameState.Phase.TARGETING and manager.state.damage_bonus == 0, "Axe chain should retain its attack after consuming the bonus.")
 	_motion(manager, axe.get_global_transform_with_canvas() * Vector2.ZERO)
 	await create_timer(0.35).timeout
-	_check(tooltip.visible and text.text.contains("]6[/color] (linha 3)") and text.text.contains("]4[/color] (linha 4)"), "The played Axe tooltip should show the retained bonus during a chain.")
+	_check(tooltip.visible and text.text.contains("]6[/color] de dano") and text.text.contains("]4[/color] na linha 4"), "The played Axe tooltip should show the retained bonus during a chain.")
 	manager.notification(Node.NOTIFICATION_WM_MOUSE_EXIT)
 	_check(not tooltip.visible, "Leaving the game window should hide the tooltip.")
 	scene.free()

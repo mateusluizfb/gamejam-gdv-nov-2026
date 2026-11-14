@@ -12,6 +12,7 @@ const RestartFlash = preload("res://game/restart_flash.gd")
 const TargetArrow = preload("res://game/target_arrow.gd")
 const ScreenEffects = preload("res://game/screen_effects.gd")
 const EndScreen = preload("res://game/end_screen.gd")
+const Text = preload("res://data/text.gd")
 const CARD_SCENE: PackedScene = preload("res://cards/card.tscn")
 const STARTING_DATA_PATH := "res://starting_cards.csv"
 const GRID_ORIGIN := Vector2(450, 100)
@@ -25,6 +26,7 @@ var card_views: Dictionary = {}
 var dragged_card: Node2D
 var drag_offset := Vector2.ZERO
 var highlighted_row := -1
+var valid_placement_cells: Array[Vector2i] = []
 var targeting_arrow: TargetArrow
 var cursor_position := Vector2.ZERO
 
@@ -36,9 +38,12 @@ var cursor_position := Vector2.ZERO
 @onready var end_screen: EndScreen = $"../EndScreen"
 
 func _ready() -> void:
+	var restart_hint := get_node_or_null("../HUD/RestartHint") as Label
+	if restart_hint != null:
+		restart_hint.text = Text.get_text("restart_hint")
 	var hand_node := get_node_or_null("Hand") as Node2D
 	if hand_node == null:
-		_fail_startup("Não é possível organizar as cartas sem o nó Hand.")
+		_fail_startup(Text.get_text("startup_no_hand"))
 		return
 	var result := StartingData.load_file(STARTING_DATA_PATH)
 	if result.has("error"):
@@ -46,7 +51,7 @@ func _ready() -> void:
 		return
 	var cell_size := _get_cell_size()
 	if cell_size == Vector2.ZERO:
-		_fail_startup("Não é possível organizar as cartas sem um Sprite2D com textura.")
+		_fail_startup(Text.get_text("startup_no_sprite"))
 		return
 	state = GameState.new(result["records"])
 	var board_views: Array = []
@@ -95,7 +100,7 @@ func _fail_startup(message: String) -> void:
 	set_process_input(false)
 	var error_label := get_node_or_null("../HUD/Error") as Label
 	if error_label != null:
-		error_label.text = "Não foi possível iniciar o jogo: %s" % message
+		error_label.text = Text.get_text("startup_error") % message
 		error_label.show()
 
 func _get_cell_size() -> Vector2:
@@ -126,6 +131,8 @@ func _refresh_state() -> void:
 		view.refresh()
 		CardParticles.set_magic_buff(view, _card_damage_bonus(view) > 0)
 	_refresh_targeting()
+	if is_instance_valid(dragged_card):
+		_update_drop_highlight()
 	var tooltip := get_node_or_null("../HUD/CardTooltip") as CardTooltip
 	if tooltip != null and tooltip.is_node_ready():
 		if is_instance_valid(tooltip.hovered_card):
@@ -170,7 +177,7 @@ func _place_card_view(card: CardData, cell: Vector2i) -> void:
 	if dragged_card == view:
 		CardParticles.stop_drag(view)
 		dragged_card = null
-		_set_highlighted_row(-1)
+		_clear_placement_highlights()
 	var tooltip := get_node_or_null("../HUD/CardTooltip") as CardTooltip
 	if tooltip != null and tooltip.hovered_card == view:
 		tooltip.set_hovered(null, 0)
@@ -236,7 +243,7 @@ func _show_game_result(outcome: GameState.Outcome) -> void:
 		CardParticles.stop_drag(dragged_card)
 		hand_layout.end_drag(dragged_card)
 		dragged_card = null
-		_set_highlighted_row(-1)
+		_clear_placement_highlights()
 		hand_layout.place_cards()
 	hand_layout.set_hovered(null)
 	Input.set_default_cursor_shape(Input.CURSOR_ARROW)
@@ -279,7 +286,7 @@ func _input(event: InputEvent) -> void:
 			CardParticles.stop_drag(dragged_card)
 			hand_layout.end_drag(dragged_card)
 			dragged_card = null
-			_set_highlighted_row(-1)
+			_clear_placement_highlights()
 			hand_layout.place_cards()
 		else:
 			state.cancel_play()
@@ -351,13 +358,28 @@ func _end_drag(mouse_position: Vector2) -> void:
 		state.play_card(dragged_card.data, cell)
 		hand_layout.place_cards()
 	dragged_card = null
-	_set_highlighted_row(-1)
+	_clear_placement_highlights()
 	_update_hand_hover(mouse_position)
 	_update_tooltip_hover(mouse_position)
 
 func _update_drop_highlight() -> void:
+	var cells: Array[Vector2i] = []
+	for row in range(state.board.size()):
+		for column in range(state.board[row].size()):
+			var candidate := Vector2i(column, row)
+			if state.can_play_card(dragged_card.data, candidate):
+				cells.append(candidate)
+	if valid_placement_cells != cells:
+		valid_placement_cells = cells
+		queue_redraw()
 	var cell := board.cell_at(to_local(dragged_card.global_position))
 	_set_highlighted_row(cell.y if state.can_play_card(dragged_card.data, cell) else -1)
+
+func _clear_placement_highlights() -> void:
+	if not valid_placement_cells.is_empty():
+		valid_placement_cells.clear()
+		queue_redraw()
+	_set_highlighted_row(-1)
 
 func _set_highlighted_row(row: int) -> void:
 	if highlighted_row != row:
@@ -398,6 +420,9 @@ func _draw() -> void:
 	if Engine.is_editor_hint() and hand_layout != null:
 		board.draw_preview()
 		hand_layout.draw_preview()
-	elif highlighted_row >= 0:
-		board.draw_row_highlight(highlighted_row)
+	else:
+		for cell in valid_placement_cells:
+			board.draw_placement_cell(cell)
+		if highlighted_row >= 0:
+			board.draw_row_highlight(highlighted_row)
 	board.draw_row_dividers()
