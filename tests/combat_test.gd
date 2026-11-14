@@ -216,6 +216,479 @@ func _test_row_highlight() -> void:
 	_check(manager.highlighted_row == -1 and manager.state.board[0][2] == trap.data, "Dropping should clear the highlight and play the card.")
 	scene.free()
 
+func _test_row_penalty_badges() -> void:
+	var scene: Node = load("res://game/main.tscn").instantiate()
+	root.add_child(scene)
+	var manager := scene.get_node("CardManager") as Node2D
+	var state = manager.state
+	var axe: Node2D = manager.hand_layout.cards[0]
+	var spear: Node2D = manager.hand_layout.cards[1]
+	var badge := axe.get_node("Bonus") as Label
+	var background := axe.get_node("BonusBackground") as ColorRect
+
+	_check(state.play_card(axe.data, Vector2i(0, 2)) and not badge.visible, "Upper-row Axe should have no row penalty badge.")
+	state.cancel_play()
+	_check(state.play_card(axe.data, Vector2i(0, 3)) and badge.visible and badge.text == "-2 DANO" and background.color.r > background.color.b, "Bottom-row Axe should show its damage penalty.")
+	state.cancel_play()
+	_check(not badge.visible, "Returning a card to the hand should remove its row penalty.")
+
+	state.damage_bonus = 2
+	state.changed.emit()
+	_check(badge.visible and badge.text == "+2 DANO" and background.color.b > background.color.r, "Hand cards should continue to show the Magic bonus in blue.")
+	_check(state.play_card(axe.data, Vector2i(0, 3)) and badge.text == "-2 DANO", "The row penalty should remain visible independently of a Magic bonus.")
+	state.cancel_play()
+	_check(badge.text == "+2 DANO" and background.color.b > background.color.r, "Canceling a play should restore the Magic badge.")
+	state.damage_bonus = 0
+	state.changed.emit()
+
+	badge = spear.get_node("Bonus") as Label
+	_check(state.play_card(spear.data, Vector2i(0, 2)) and badge.visible and badge.text == "-1 DANO", "Upper-row Spear should show its damage penalty.")
+	state.cancel_play()
+	_check(state.play_card(spear.data, Vector2i(0, 3)) and not badge.visible, "Bottom-row Spear should have no row penalty badge.")
+	state.cancel_play()
+	badge = axe.get_node("Bonus") as Label
+	_check(state.play_card(axe.data, Vector2i(0, 3)) and state.select_target(state.board[0][0]), "Axe should be playable for the resolved penalty check.")
+	await create_timer(0.6).timeout
+	_check(state.phase == GameState.Phase.IDLE and badge.visible and badge.text == "-2 DANO", "The row penalty should remain visible after the attack resolves.")
+	scene.free()
+
+func _test_elephant_water_material() -> void:
+	var scene: Node = load("res://game/main.tscn").instantiate()
+	root.add_child(scene)
+	var manager = scene.get_node("CardManager")
+	for card in manager.card_views:
+		var sprite := manager.card_views[card].get_node("Sprite2D") as Sprite2D
+		if card.type == CardData.Type.ELEPHANT:
+			_check(sprite.material is ShaderMaterial and sprite.material.shader == preload("res://cards/card.gdshader"), "Elephants should use the water shader.")
+		else:
+			_check(not sprite.material is ShaderMaterial or sprite.material.shader != preload("res://cards/card.gdshader"), "Player cards should not use the water shader.")
+	manager._refresh_state()
+	var elephant: CardData = manager.state.board[0][0]
+	var material: Material = manager.card_views[elephant].get_node("Sprite2D").material
+	_check(material is ShaderMaterial, "Refreshing cards should preserve the elephant shader.")
+	var fresh_view = load("res://cards/card.tscn").instantiate()
+	fresh_view.data = elephant
+	fresh_view.get_node("Sprite2D").material = null
+	scene.add_child(fresh_view)
+	_check(fresh_view.get_node("Sprite2D").material is ShaderMaterial and fresh_view.get_node("Sprite2D").material.shader == preload("res://cards/card.gdshader"), "Elephants should receive the shader even without a scene material.")
+	scene.free()
+
+func _test_card_drop_sound() -> void:
+	var scene: Node = load("res://game/main.tscn").instantiate()
+	root.add_child(scene)
+	var manager := scene.get_node("CardManager") as Node2D
+	var sound := manager.get_node("CardDropSound") as AudioStreamPlayer
+	var axe: Node2D = manager.hand_layout.cards[0]
+	_check(sound.stream != null and sound.stream.get_length() > 0, "Card drop sound should load as a playable audio stream.")
+	var wav := sound.stream as AudioStreamWAV
+	_check(wav != null and wav.format == AudioStreamWAV.FORMAT_16_BITS, "The converted card-drop sound should retain its 16-bit PCM format.")
+	_button(manager, Vector2.ZERO, false)
+	_check(not sound.playing, "Releasing without a dragged card should not play the sound.")
+	_button(manager, axe.get_global_transform_with_canvas() * Vector2.ZERO, true)
+	_escape(manager)
+	_check(not sound.playing, "Canceling a drag should not play the drop sound.")
+	_drag(manager, axe, Vector2.ZERO)
+	_check(sound.playing and manager.state.player.hand.has(axe.data), "An invalid drop should play the sound and return the card to the hand.")
+	sound.stop()
+	_drag(manager, axe, manager.board.cell_position(Vector2i(1, 2)))
+	_check(sound.playing and manager.state.board[2][1] == axe.data, "A valid drop should play the sound and place the card.")
+	sound.stop()
+	var enemy: Node2D = manager.card_views[manager.state.board[0][0]]
+	_click_card(manager, enemy)
+	_check(not sound.playing, "Selecting a target should not play the card-drop sound.")
+	_escape(manager)
+	await create_timer(0.6).timeout
+	scene.free()
+
+func _test_axe_attack_sound() -> void:
+	var scene: Node = load("res://game/main.tscn").instantiate()
+	root.add_child(scene)
+	var manager := scene.get_node("CardManager") as Node2D
+	var state = manager.state
+	var sound := manager.get_node("AxeAttackSound") as AudioStreamPlayer
+	var axe: CardData = state.player.hand[0]
+	var first: CardData = state.board[0][0]
+	var second: CardData = state.board[0][1]
+	_check(sound.stream != null and sound.stream.resource_path == "res://assets/audio/attack3.wav" and sound.stream.get_length() > 0, "Axe attack sound should load the requested audio.")
+	state.set_card_hp(first, 1)
+	_check(state.play_card(axe, Vector2i(1, 2)) and state.select_target(first), "Axe should start targeting an enemy.")
+	await create_timer(0.25).timeout
+	_check(not sound.playing and first.current_hp == 1, "The attack sound should wait for the damage delay.")
+	_check(state.cancel_play(), "The pending axe attack should be cancelable.")
+	await create_timer(0.35).timeout
+	_check(not sound.playing and first.current_hp == 1, "A canceled attack should not play the attack sound.")
+
+	_check(state.play_card(axe, Vector2i(1, 2)) and state.select_target(first), "Axe should be playable again after cancellation.")
+	await create_timer(0.6).timeout
+	_check(sound.playing and first.board_position == null and state.phase == GameState.Phase.TARGETING, "A resolved killing attack should play the sound and start a chain.")
+	sound.stop()
+	_check(state.select_target(second), "Axe should select the next chain target.")
+	await create_timer(0.6).timeout
+	_check(sound.playing and second.current_hp == 6 and state.phase == GameState.Phase.IDLE, "A follow-up axe attack should play the sound again.")
+	sound.stop()
+
+	var spear: CardData = state.player.hand[0]
+	var other: CardData = state.board[1][1]
+	_check(state.play_card(spear, Vector2i(0, 2)) and state.select_target(other), "Spear should start its attack.")
+	await create_timer(0.6).timeout
+	_check(not sound.playing and other.current_hp == 12, "Spear attacks should not play the axe sound.")
+	scene.free()
+	await create_timer(0.1).timeout
+
+func _test_spear_attack_sound() -> void:
+	var scene: Node = load("res://game/main.tscn").instantiate()
+	root.add_child(scene)
+	var manager := scene.get_node("CardManager") as Node2D
+	var state = manager.state
+	var sound := manager.get_node("SpearAttackSound") as AudioStreamPlayer
+	var spear: CardData = state.player.hand[1]
+	var target: CardData = state.board[1][1]
+	_check(sound.stream != null and sound.stream.resource_path == "res://assets/audio/arrow.mp3" and sound.stream.get_length() > 0, "Spear attack sound should load the requested audio.")
+	_check(state.play_card(spear, Vector2i(1, 2)) and state.select_target(target), "Spear should start targeting an enemy.")
+	await create_timer(0.25).timeout
+	_check(not sound.playing and target.current_hp == 13, "Spear sound should wait for the damage delay.")
+	_check(state.cancel_play(), "The pending spear attack should be cancelable.")
+	await create_timer(0.35).timeout
+	_check(not sound.playing and target.current_hp == 13, "A canceled spear attack should not play the sound.")
+
+	_check(state.play_card(spear, Vector2i(1, 2)) and state.select_target(target), "Spear should be playable again after cancellation.")
+	await create_timer(0.6).timeout
+	_check(sound.playing and target.current_hp == 12 and target.board_position == Vector2i(2, 0), "A resolved spear attack should play the sound and move its target.")
+	sound.stop()
+	var axe: CardData = state.player.hand[0]
+	var other: CardData = state.board[0][0]
+	_check(state.play_card(axe, Vector2i(0, 2)) and state.select_target(other), "Axe should start its attack.")
+	await create_timer(0.6).timeout
+	_check(not sound.playing and other.current_hp == 6, "Axe attacks should not play the spear sound.")
+	scene.free()
+	await create_timer(0.1).timeout
+
+func _test_magic_entry_sound() -> void:
+	var scene: Node = load("res://game/main.tscn").instantiate()
+	root.add_child(scene)
+	var manager := scene.get_node("CardManager") as Node2D
+	var state = manager.state
+	var sound := manager.get_node("MagicEntrySound") as AudioStreamPlayer
+	var magic: Node2D = manager.hand_layout.cards[2]
+	var wav := sound.stream as AudioStreamWAV
+	_check(wav != null and wav.format == AudioStreamWAV.FORMAT_16_BITS and wav.get_length() > 0, "Magic entry sound should load as playable 16-bit PCM.")
+	_drag(manager, magic, Vector2.ZERO)
+	_check(not sound.playing and state.player.hand.has(magic.data), "An invalid magic drop should not play the entry sound.")
+	_button(manager, magic.get_global_transform_with_canvas() * Vector2.ZERO, true)
+	_escape(manager)
+	_check(not sound.playing, "Canceling a magic drag should not play the entry sound.")
+
+	_drag(manager, magic, manager.board.cell_position(Vector2i(1, 2)))
+	_check(sound.playing and state.damage_bonus == 0, "Magic should play its entry sound immediately, before its delayed effect.")
+	_check(magic.get_node_or_null("MagicBuffAura") == null, "Magic particles should wait until the buff is applied.")
+	_escape(manager)
+	_check(not sound.playing and state.player.hand.has(magic.data), "Canceling a placed Magic card should stop its entry sound.")
+	await create_timer(0.6).timeout
+	_check(state.damage_bonus == 0 and not sound.playing and magic.get_node_or_null("MagicBuffAura") == null, "Canceled Magic should not apply its effect or create particles.")
+
+	_drag(manager, magic, manager.board.cell_position(Vector2i(1, 2)))
+	_check(sound.playing, "Replaying Magic after cancellation should play the entry sound again.")
+	await create_timer(0.6).timeout
+	_check(sound.playing and state.damage_bonus == 2, "The entry sound should continue naturally when Magic resolves.")
+	var axe: Node2D = manager.hand_layout.cards[0]
+	var buff_particles := axe.get_node_or_null("MagicBuffAura") as ColorRect
+	_check(magic.get_node_or_null("MagicBuffAura") == null, "A played Magic card should not retain the bonus.")
+	_check(buff_particles != null and buff_particles.visible and buff_particles.color.r > buff_particles.color.g * 2.0 and buff_particles.material.shader == load("res://cards/continuous_aura.gdshader"), "A buffed card should have a continuous red aura.")
+	for card in manager.hand_layout.cards:
+		_check(card.get_node_or_null("MagicBuffAura") != null, "Every buffed hand card should show particles.")
+	manager._refresh_state()
+	_check(axe.get_node_or_null("MagicBuffAura") == buff_particles, "Refreshing state should not restart existing buff particles.")
+	sound.stop()
+	await create_timer(1.8).timeout
+	_check(axe.get_node_or_null("MagicBuffAura") == buff_particles and buff_particles.visible, "Buff aura should persist until the bonus expires.")
+	_drag(manager, axe, manager.board.cell_position(Vector2i(0, 3)))
+	_check(not sound.playing, "Placing a non-Magic card should not play the Magic entry sound.")
+	_escape(manager)
+	scene.free()
+	await create_timer(0.1).timeout
+
+func _test_buff_particles_lifecycle() -> void:
+	var scene: Node = load("res://game/main.tscn").instantiate()
+	root.add_child(scene)
+	var manager := scene.get_node("CardManager") as Node2D
+	var state = manager.state
+	var axe: Node2D = manager.hand_layout.cards[0]
+	var spear: Node2D = manager.hand_layout.cards[1]
+	var magic: Node2D = manager.hand_layout.cards[2]
+	var trap: Node2D = manager.hand_layout.cards[3]
+	var first: CardData = state.board[0][0]
+	var second: CardData = state.board[0][1]
+	_check(state.play_card(magic.data, Vector2i(1, 2)), "Magic should be playable for the buff lifecycle test.")
+	await create_timer(0.6).timeout
+	var particles := axe.get_node_or_null("MagicBuffAura")
+	_button(manager, axe.get_global_transform_with_canvas() * Vector2.ZERO, true)
+	_check(axe.get_node_or_null("MagicBuffAura") == particles and axe.get_node("DragAura").visible, "Buff and drag auras should coexist on a dragged card.")
+	_escape(manager)
+	state.set_card_hp(first, 1)
+	_drag(manager, axe, manager.board.cell_position(Vector2i(0, 3)))
+	_check(axe.get_node_or_null("MagicBuffAura") == particles, "The pending buffed attack should retain particles on the board.")
+	_check(state.select_target(first), "Axe should target the first enemy.")
+	await create_timer(0.6).timeout
+	_check(state.phase == GameState.Phase.TARGETING and state.damage_bonus == 0 and axe.get_node_or_null("MagicBuffAura") == particles, "An Axe chain should retain its original bonus particles.")
+	_check(spear.get_node_or_null("MagicBuffAura") == null and trap.get_node_or_null("MagicBuffAura") == null, "Other cards should lose particles when the bonus is consumed.")
+	_escape(manager)
+	_check(state.damage_bonus == 2 and axe.get_node_or_null("MagicBuffAura") == particles and spear.get_node_or_null("MagicBuffAura") != null and trap.get_node_or_null("MagicBuffAura") != null, "Canceling an Axe chain should restore the bonus and hand particles.")
+	_drag(manager, axe, manager.board.cell_position(Vector2i(0, 3)))
+	_check(state.select_target(first), "Axe should target the restored enemy.")
+	await create_timer(0.6).timeout
+	_check(state.select_target(second), "Axe should target a surviving follow-up enemy.")
+	await create_timer(0.6).timeout
+	_check(state.phase == GameState.Phase.IDLE and axe.get_node_or_null("MagicBuffAura") == null and spear.get_node_or_null("MagicBuffAura") == null, "Completing an attack should remove all expired buff particles.")
+	scene.free()
+	await create_timer(0.1).timeout
+
+	scene = load("res://game/main.tscn").instantiate()
+	root.add_child(scene)
+	manager = scene.get_node("CardManager") as Node2D
+	state = manager.state
+	magic = manager.hand_layout.cards[2]
+	trap = manager.hand_layout.cards[3]
+	spear = manager.hand_layout.cards[1]
+	state.play_card(magic.data, Vector2i(1, 2))
+	await create_timer(0.6).timeout
+	_check(state.play_card(trap.data, Vector2i(2, 0)) and trap.get_node_or_null("MagicBuffAura") != null, "A pending buffed Trap should show particles on the board.")
+	_escape(manager)
+	_check(state.player.hand.has(trap.data) and trap.get_node_or_null("MagicBuffAura") != null, "A canceled Trap should keep its restored bonus particles.")
+	_check(state.play_card(trap.data, Vector2i(2, 0)), "The restored Trap should be playable again.")
+	await create_timer(0.6).timeout
+	_check(state.damage_bonus == 0 and spear.get_node_or_null("MagicBuffAura") == null and not is_instance_valid(trap), "A resolved Trap should consume the bonus and clean up its particles.")
+	state.damage_bonus = 2
+	state.changed.emit()
+	_check(state.play_card(spear.data, Vector2i(0, 2)) and spear.get_node_or_null("MagicBuffAura") != null, "A pending buffed Spear should show particles on the board.")
+	_check(state.select_target(state.board[1][1]), "Spear should target an enemy.")
+	await create_timer(0.6).timeout
+	_check(state.phase == GameState.Phase.IDLE and spear.get_node_or_null("MagicBuffAura") == null, "A resolved Spear should lose its consumed bonus particles.")
+	scene.free()
+	await create_timer(0.1).timeout
+
+func _test_particles() -> void:
+	var scene: Node = load("res://game/main.tscn").instantiate()
+	root.add_child(scene)
+	var manager := scene.get_node("CardManager") as Node2D
+	manager.position = Vector2(30, 40)
+	manager.scale = Vector2(1.3, 1.3)
+	var state = manager.state
+	var board = manager.board
+	var axe: Node2D = manager.hand_layout.cards[0]
+	var start := axe.get_global_transform_with_canvas() * Vector2.ZERO
+	_button(manager, start, true)
+	var drag := axe.get_node_or_null("DragAura") as ColorRect
+	_check(drag != null and drag.visible, "Dragging should show an aura around the card.")
+	if drag != null:
+		var sprite := axe.get_node("Sprite2D") as Sprite2D
+		_check(drag.material.shader == load("res://cards/continuous_aura.gdshader") and drag.size.x > sprite.get_rect().size.x * sprite.scale.x, "Drag aura should surround the card.")
+		_motion(manager, manager.get_global_transform_with_canvas() * board.cell_position(Vector2i(0, 2)))
+		_check(drag.get_parent() == axe and drag.visible, "Drag aura should follow the moving card.")
+	_escape(manager)
+	_check(drag != null and not drag.visible, "Canceling a drag should hide its aura.")
+	_check(manager.get_node_or_null("DropAura") == null, "Canceling a drag should not create a release burst.")
+
+	_drag(manager, axe, Vector2.ZERO)
+	var invalid_drop := manager.get_node_or_null("DropAura") as ColorRect
+	_check(invalid_drop != null and (invalid_drop.position + invalid_drop.size / 2.0).distance_to(Vector2.ZERO) < 0.01 and state.player.hand.has(axe.data), "An invalid release should show an aura and return the card to the hand.")
+	await create_timer(0.9).timeout
+	_check(manager.get_node_or_null("DropAura") == null, "An invalid-release burst should clean itself up.")
+
+	var destination: Vector2 = board.cell_position(Vector2i(1, 2))
+	_drag(manager, axe, destination)
+	var drop := manager.get_node_or_null("DropAura") as ColorRect
+	_check(drop != null and (drop.position + drop.size / 2.0).is_equal_approx(destination) and drop.material.shader == load("res://cards/continuous_aura.gdshader"), "Releasing should create an aura at the drop position.")
+	_check(drag != null and not drag.visible, "Releasing should stop the drag particles.")
+	_button(manager, manager.get_global_transform_with_canvas() * Vector2.ZERO, true)
+	_check(manager.get_node_or_null("DamageAura") == null, "Clicking outside enemy cards should not create damage particles.")
+	var enemy: Node2D = manager.card_views[state.board[0][0]]
+	var original_hp: int = enemy.data.current_hp
+	_click_card(manager, enemy)
+	var damage := manager.get_node_or_null("DamageAura") as ColorRect
+	_check(damage != null and (damage.position + damage.size / 2.0).is_equal_approx(manager.to_local(enemy.global_position)), "Selecting an enemy should create a damage aura at that enemy.")
+	_escape(manager)
+	await create_timer(0.65).timeout
+	_check(enemy.data.current_hp == original_hp, "Canceling a target selection should still prevent delayed damage.")
+
+	var trap: Node2D = manager.hand_layout.cards[-1]
+	_drag(manager, trap, board.cell_position(Vector2i(2, 0)))
+	_check(manager.get_node_or_null("TrapAura") == null, "Trap particles should wait until the effect resolves.")
+	_escape(manager)
+	await create_timer(0.65).timeout
+	_check(manager.get_node_or_null("TrapAura") == null, "A canceled Trap should not create a row effect.")
+	_drag(manager, trap, board.cell_position(Vector2i(2, 1)))
+	await create_timer(0.55).timeout
+	var row_particles := manager.get_node_or_null("TrapAura") as ColorRect
+	var row_size := Vector2(board.cards[1].size() * board.cell_size.x, board.cell_size.y)
+	var row_center: Vector2 = board.cell_position(Vector2i(0, 1)) - board.cell_size / 2.0 + row_size / 2.0
+	_check(row_particles != null and (row_particles.position + row_particles.size / 2.0).is_equal_approx(row_center) and row_particles.size.x > row_size.x, "Trap aura should cover the resolved enemy row.")
+	await create_timer(1.2).timeout
+	_check(manager.get_node_or_null("TrapAura") == null and manager.get_node_or_null("DamageAura") == null and manager.get_node_or_null("DropAura") == null, "Finished particle bursts should be removed.")
+	var magic: Node2D
+	for view in manager.hand_layout.cards:
+		if view.data.type == CardData.Type.MAGIC:
+			magic = view
+	_button(manager, magic.get_global_transform_with_canvas() * Vector2.ZERO, true)
+	var magic_drag := magic.get_node("DragAura") as ColorRect
+	_check(state.play_card(magic.data, Vector2i(0, 3)) and manager.dragged_card == null and not magic_drag.visible, "A programmatic play should stop any active drag particles.")
+	_escape(manager)
+	scene.free()
+
+func _test_screen_effects() -> void:
+	var scene: Node2D = load("res://game/main.tscn").instantiate()
+	scene.position = Vector2(30, 20)
+	root.add_child(scene)
+	var manager = scene.get_node("CardManager")
+	var effects = scene.get_node("ScreenEffects")
+	var state = manager.state
+	var magic = manager.hand_layout.cards[2].data
+	_check(state.play_card(magic, Vector2i(1, 2)), "Magic should begin before the screen effect.")
+	_check(not effects.overlay.visible and effects.magic_strength == 0.0, "Magic should not affect the screen before it resolves.")
+	state.cancel_play()
+	await create_timer(0.55).timeout
+	_check(effects.magic_strength == 0.0 and not effects.overlay.visible, "Canceled Magic should not trigger a screen effect.")
+	_check(state.play_card(magic, Vector2i(1, 2)), "Magic should be playable again.")
+	state.resolve_effect(state.effect_token)
+	await create_timer(0.2).timeout
+	_check(effects.magic_strength > 0.0 and effects.overlay.visible and effects.overlay.material.shader == load("res://game/screen_effects.gdshader"), "Resolved Magic should show a screen-wide shader.")
+	_check(effects.overlay.anchor_right == 1.0 and effects.overlay.anchor_bottom == 1.0, "Screen effects should cover the viewport.")
+	var axe = manager.hand_layout.cards[0].data
+	var enemy: CardData = state.board[0][0]
+	_check(state.play_card(axe, Vector2i(0, 2)) and state.select_target(enemy), "Axe should start an attack.")
+	_check(effects.impact_strength == 0.0, "Selecting a target should not trigger impact before damage.")
+	state.resolve_effect(state.effect_token)
+	await create_timer(0.12).timeout
+	_check(effects.impact_strength > 0.0 and effects.magic_strength > 0.0 and not scene.position.is_equal_approx(Vector2(30, 20)), "Axe impact should overlap Magic and shake the screen.")
+	await create_timer(0.5).timeout
+	_check(is_zero_approx(effects.impact_strength) and effects.magic_strength > 0.0 and scene.position.is_equal_approx(Vector2(30, 20)), "Impact should end after half a second and restore the original screen position.")
+	await create_timer(0.9).timeout
+	_check(is_zero_approx(effects.magic_strength) and not effects.overlay.visible, "Magic screen effect should finish after about 1.5 seconds.")
+	var spear = manager.hand_layout.cards[0].data
+	_check(state.play_card(spear, Vector2i(2, 2)) and state.select_target(state.board[1][1]), "Spear should start an attack.")
+	state.resolve_effect(state.effect_token)
+	await create_timer(0.1).timeout
+	_check(effects.impact_strength > 0.0, "Spear hits should trigger the impact effect.")
+	var trap = manager.hand_layout.cards[-1].data
+	_check(state.play_card(trap, Vector2i(3, 0)), "Trap should start while a previous impact is fading.")
+	state.resolve_effect(state.effect_token)
+	await create_timer(0.1).timeout
+	_check(effects.impact_strength > 0.0 and not scene.position.is_equal_approx(Vector2(30, 20)), "Trap should retrigger the impact effect and shake.")
+	await create_timer(0.55).timeout
+	_check(is_zero_approx(effects.impact_strength) and scene.position.is_equal_approx(Vector2(30, 20)) and not effects.overlay.visible, "Repeated impacts should finish and restore the screen.")
+	scene.free()
+
+func _test_card_movement() -> void:
+	var scene: Node = load("res://game/main.tscn").instantiate()
+	var hand := scene.get_node("CardManager/Hand") as Node2D
+	hand.position = Vector2(20, 10)
+	hand.scale = Vector2(0.9, 1.1)
+	root.add_child(scene)
+	var manager = scene.get_node("CardManager")
+	manager.position = Vector2(30, 40)
+	manager.scale = Vector2(1.3, 1.3)
+	var state = manager.state
+	var axe = manager.hand_layout.cards[0]
+	var start: Vector2 = axe.global_position
+	var destination: Vector2 = manager.to_global(manager.board.cell_position(Vector2i(1, 2)))
+	_check(state.play_card(axe.data, Vector2i(1, 2)), "Programmatic play should start a card movement.")
+	_check(axe.global_position.is_equal_approx(start), "Moving from hand to board should preserve the starting position.")
+	await create_timer(0.1).timeout
+	_check(axe.global_position.distance_to(start) > 1.0 and axe.global_position.distance_to(destination) > 1.0, "A played card should move through intermediate positions.")
+	await process_frame
+	_check(manager.targeting_arrow.start.is_equal_approx(manager.to_local(axe.global_position)), "Targeting beam should follow the moving attacker.")
+	var interrupted: Vector2 = axe.global_position
+	state.cancel_play()
+	_check(axe.global_position.is_equal_approx(interrupted), "Canceling a moving card should return it from its current position.")
+	await create_timer(0.35).timeout
+	_check(manager.to_local(axe.global_position).is_equal_approx(manager.hand_layout.card_position(0)), "Canceled card should reach its hand position with transformed parents.")
+	_check(axe.scale.is_equal_approx(Vector2.ONE), "Returning a card should restore its original hand scale.")
+	var spear = manager.hand_layout.cards[1]
+	var enemy: CardData = state.board[1][1]
+	var enemy_view: Node2D = manager.card_views[enemy]
+	var enemy_start := enemy_view.position
+	_check(state.play_card(spear.data, Vector2i(0, 2)) and state.select_target(enemy), "Spear should start a row movement.")
+	await create_timer(0.56).timeout
+	var enemy_end: Vector2 = manager.board.cell_position(Vector2i(2, 0))
+	_check(enemy.board_position == Vector2i(2, 0) and enemy_view.position.distance_to(enemy_start) > 0.0 and enemy_view.position.distance_to(enemy_end) > 1.0, "Enemy row changes should animate after their logical move.")
+	await create_timer(0.3).timeout
+	_check(enemy_view.position.is_equal_approx(enemy_end), "Enemy should finish moving into the new row.")
+	axe.move_to(axe.position + Vector2(-100, 0))
+	await create_timer(0.08).timeout
+	manager._begin_drag(axe.get_global_transform_with_canvas() * Vector2.ZERO)
+	var drag_position: Vector2 = axe.position
+	await create_timer(0.3).timeout
+	_check(manager.dragged_card == axe and axe.position.is_equal_approx(drag_position), "Dragging should interrupt an in-flight animation without pulling the card away.")
+	_escape(manager)
+	scene.free()
+
+func _test_targeting_effects() -> void:
+	var scene: Node = load("res://game/main.tscn").instantiate()
+	root.add_child(scene)
+	var manager := scene.get_node("CardManager") as Node2D
+	manager.position = Vector2(30, 40)
+	manager.scale = Vector2(1.3, 1.3)
+	var state = manager.state
+	var axe: Node2D = manager.hand_layout.cards[0]
+	var spear: Node2D = manager.hand_layout.cards[1]
+	var first: CardData = state.board[0][0]
+	var second: CardData = state.board[0][1]
+	var third: CardData = state.board[1][1]
+	var first_view: Node2D = manager.card_views[first]
+	var second_view: Node2D = manager.card_views[second]
+	var third_view: Node2D = manager.card_views[third]
+	_check(first_view.get_node_or_null("TargetAura") == null and manager.get_node_or_null("TargetArrow") == null, "Targeting effects should be absent while idle.")
+	state.set_card_hp(first, 1)
+	var destination: Vector2 = manager.board.cell_position(Vector2i(1, 2))
+	_drag(manager, axe, destination)
+	var arrow = manager.get_node_or_null("TargetArrow")
+	var aura := first_view.get_node_or_null("TargetAura")
+	_check(arrow != null and aura != null and second_view.get_node_or_null("TargetAura") != null and third_view.get_node_or_null("TargetAura") != null, "Targeting should show an arrow and an aura on every enemy.")
+	_check(axe.get_node_or_null("TargetAura") == null and spear.get_node_or_null("TargetAura") == null, "Player cards should not show target auras.")
+	if arrow != null:
+		_check(arrow.start.is_equal_approx(manager.to_local(axe.global_position)) and arrow.end.is_equal_approx(destination + Vector2(6, 4)), "Arrow should initially connect the attacking card to the cursor.")
+		var cursor := Vector2(810, 240)
+		_motion(manager, manager.get_global_transform_with_canvas() * cursor)
+		_check(arrow.end.is_equal_approx(cursor), "Arrow should track cursor motion with transformed managers.")
+		_check(arrow.material is ShaderMaterial and arrow.material.shader == load("res://game/target_beam.gdshader"), "Targeting beam should use its animated shader.")
+		var midpoint: Vector2 = arrow._curve_position(0.5)
+		_check(arrow._curve_position(0.0).is_equal_approx(arrow.start) and arrow._curve_position(1.0).is_equal_approx(arrow.end) and midpoint.distance_to((arrow.start + arrow.end) / 2.0) > 1.0, "Beam should arc between the attacking card and the cursor.")
+		arrow.set_points(cursor, cursor)
+		_check(arrow._curve_position(0.5).is_equal_approx(cursor), "A zero-length beam should remain anchored at the cursor.")
+		arrow.set_points(manager.to_local(axe.global_position), cursor)
+		_motion(manager, manager.get_global_transform_with_canvas() * cursor)
+	if aura != null:
+		_check(aura is ColorRect and aura.material.shader == load("res://cards/continuous_aura.gdshader") and aura.get_child_count() == 0, "Enemy targeting should use a continuous aura without particle dots.")
+	manager._refresh_state()
+	_check(first_view.get_node_or_null("TargetAura") == aura, "Refreshing targeting should preserve existing aura particles.")
+	_click_card(manager, first_view)
+	_check(state.phase == GameState.Phase.RESOLVING and manager.get_node_or_null("TargetArrow") == null and second_view.get_node_or_null("TargetAura") == null, "Effects should disappear as soon as a target is selected.")
+	await create_timer(0.6).timeout
+	_check(state.phase == GameState.Phase.TARGETING and manager.get_node_or_null("TargetArrow") != null and second_view.get_node_or_null("TargetAura") != null and third_view.get_node_or_null("TargetAura") != null, "Axe chains should restore effects on surviving enemies.")
+	_escape(manager)
+	first_view = manager.card_views[first]
+	_check(manager.get_node_or_null("TargetArrow") == null and first_view.get_node_or_null("TargetAura") == null and second_view.get_node_or_null("TargetAura") == null, "Canceling a chain should clear targeting effects, including restored enemies.")
+	_check(state.play_card(spear.data, Vector2i(0, 2)) and manager.get_node_or_null("TargetArrow") != null and first_view.get_node_or_null("TargetAura") != null, "Programmatic spear play should also show targeting effects.")
+	_check(state.select_target(second), "Spear should select an enemy.")
+	_check(manager.get_node_or_null("TargetArrow") == null and first_view.get_node_or_null("TargetAura") == null, "Programmatic target selection should clear targeting effects.")
+	await create_timer(0.6).timeout
+	_check(state.phase == GameState.Phase.IDLE and manager.get_node_or_null("TargetArrow") == null, "Completed attacks should leave no targeting arrow.")
+	_check(state.play_card(axe.data, Vector2i(1, 2)), "Axe should enter targeting before restart.")
+	current_scene = scene
+	var restart := InputEventKey.new()
+	restart.keycode = KEY_R
+	restart.pressed = true
+	manager._input(restart)
+	await create_timer(0.75).timeout
+	_check(current_scene != null and current_scene != scene, "Restart should reload while targeting.")
+	if current_scene != null and current_scene != scene:
+		var new_manager = current_scene.get_node("CardManager")
+		var new_enemy: Node2D = new_manager.card_views[new_manager.state.board[0][0]]
+		_check(new_manager.get_node_or_null("TargetArrow") == null and new_enemy.get_node_or_null("TargetAura") == null, "Restarted game should not retain targeting effects.")
+	await create_timer(0.75).timeout
+	if current_scene != null:
+		current_scene.free()
+		current_scene = null
+
 func _test_ui() -> void:
 	var scene: Node = load("res://game/main.tscn").instantiate()
 	var hand_node := scene.get_node("CardManager/Hand") as Node2D
@@ -308,6 +781,7 @@ func _test_ui() -> void:
 	_click_card(spear_manager, target_view)
 	await create_timer(0.6).timeout
 	_check(target.current_hp == 12 and target.board_position == Vector2i(2, 0), "Spear should damage and move the target to a free neighboring column.")
+	await create_timer(0.3).timeout
 	_check(spear_board.cards[0][2] == target_view and target_view.position.is_equal_approx(spear_board.cell_position(Vector2i(2, 0))), "Spear should move the target's board view.")
 	spear_scene.free()
 
@@ -317,6 +791,7 @@ func _test_ui() -> void:
 	var layout_magic: Node2D = layout_manager.hand_layout.cards[2]
 	_check(layout_manager.state.play_card(layout_magic.data, Vector2i(0, 3)), "Programmatic Magic play should be accepted.")
 	_check(is_zero_approx(layout_magic.rotation), "A programmatically played card should not retain hand rotation.")
+	await create_timer(0.3).timeout
 	var hand_index := 0
 	for view in layout_manager.hand_layout.cards:
 		_check(layout_manager.to_local(view.global_position).is_equal_approx(layout_manager.hand_layout.card_position(hand_index)), "Hand should relayout after a programmatic play.")
@@ -337,6 +812,7 @@ func _test_restart() -> void:
 	old_state.set_card_hp(old_state.board[0][0], 3)
 	var magic: CardData = old_state.player.hand[2]
 	_check(old_state.play_card(magic, Vector2i(0, 3)), "Magic should start before restart.")
+	await create_timer(0.4).timeout
 	var event := InputEventKey.new()
 	event.keycode = KEY_R
 	event.pressed = true
@@ -346,13 +822,44 @@ func _test_restart() -> void:
 	event.echo = false
 	Input.parse_input_event(event)
 	await process_frame
-	await process_frame
-	_check(current_scene != scene, "Pressing R should reload the scene.")
+	var flash := root.get_node_or_null("RestartFlash")
+	_check(flash != null and current_scene == scene, "Restart should begin with a fade before reloading.")
+	if flash == null:
+		scene.free()
+		current_scene = null
+		return
+	var reload_progress := []
+	scene.tree_exiting.connect(func() -> void: reload_progress.append(flash.progress))
+	_check(flash.flash.anchor_right == 1.0 and flash.flash.anchor_bottom == 1.0 and flash.layer > 1, "Flash should cover the viewport above the HUD.")
+	var cancel := InputEventAction.new()
+	cancel.action = "ui_cancel"
+	cancel.pressed = true
+	manager._input(cancel)
+	_check(old_state.pending_card == magic, "Gameplay input should be blocked during the flash.")
+	Input.parse_input_event(event)
+	await create_timer(0.25).timeout
+	var progress: float = flash.progress
+	_check(progress > 0.0 and progress < 1.0 and current_scene == scene, "Black fade should appear before reloading.")
+	_check(old_state.damage_bonus == 0, "Pending effects should not resolve during the restart fade.")
+	await create_timer(0.46).timeout
+	_check(current_scene != scene and root.get_node_or_null("RestartFlash") == flash, "Scene should reload while the fade remains visible.")
 	if current_scene == null or current_scene == scene:
+		flash.queue_free()
+		scene.free()
+		current_scene = null
 		return
 	var restarted = current_scene.get_node("CardManager").state
+	_check(reload_progress.size() == 1 and is_equal_approx(reload_progress[0], 1.0), "Scene should reload at full black coverage.")
+	_check(flash.progress > 0.8, "Fade should still cover most of the scene just after reload.")
 	_check(restarted.board[0][0].current_hp == 10 and restarted.player.hand.size() == 4 and restarted.damage_bonus == 0, "Restart should restore the starting state.")
+	var restarted_scene := current_scene
+	var closing_progress: float = flash.progress
+	Input.parse_input_event(event)
+	await create_timer(0.15).timeout
+	progress = flash.progress
+	_check(progress > 0.0 and progress < closing_progress and current_scene == restarted_scene, "Fade should disappear and block another restart.")
 	await create_timer(0.6).timeout
+	_check(root.get_node_or_null("RestartFlash") == null, "Fade should be removed after disappearing.")
 	_check(restarted.damage_bonus == 0 and old_state.damage_bonus == 0, "Pending effects should not resolve after restart.")
 	current_scene.free()
 	current_scene = null
@@ -439,6 +946,17 @@ func _run() -> void:
 	_test_cancellation_and_rows()
 	_test_trap_bonus_and_full_row()
 	_test_row_highlight()
+	await _test_row_penalty_badges()
+	_test_elephant_water_material()
+	await _test_card_drop_sound()
+	await _test_axe_attack_sound()
+	await _test_spear_attack_sound()
+	await _test_magic_entry_sound()
+	await _test_buff_particles_lifecycle()
+	await _test_particles()
+	await _test_screen_effects()
+	await _test_card_movement()
+	await _test_targeting_effects()
 	await _test_tooltips()
 	await _test_ui()
 	await _test_restart()

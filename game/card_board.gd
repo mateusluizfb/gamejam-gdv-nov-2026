@@ -45,9 +45,14 @@ func try_add_card(card: Node2D, position: Vector2) -> bool:
 	var cell := cell_at(position)
 	if cell == Vector2i(-1, -1) or cards[cell.y][cell.x] != null:
 		return false
-	card.reparent(container, false)
+	card.stop_moving()
+	var original_scale: Vector2 = card.scale
+	var original_rotation: float = card.rotation
+	card.reparent(container, true)
+	card.scale = original_scale
+	card.rotation = original_rotation
 	cards[cell.y][cell.x] = card
-	card.position = cell_position(cell)
+	card.move_to(cell_position(cell))
 	return true
 
 func remove_card(card: Node2D, cell: Vector2i) -> bool:
@@ -63,7 +68,7 @@ func move_card(card: Node2D, from: Vector2i, to: Vector2i) -> bool:
 		return false
 	cards[from.y][from.x] = null
 	cards[to.y][to.x] = card
-	card.position = cell_position(to)
+	card.move_to(cell_position(to))
 	return true
 
 func center_x() -> float:

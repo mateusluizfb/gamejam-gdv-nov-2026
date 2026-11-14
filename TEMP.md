@@ -74,13 +74,16 @@ The entire file is validated before a game is created. Invalid data, including d
 
 - Press `R` to restart the match from the starting CSV.
 - Hover a hand or board card briefly to see its effect and current values in a tooltip. The tooltip stays within the screen, hides while dragging, and includes any active Magic bonus for attacking cards.
+- Elephant card artwork has an animated water shader; card labels remain readable and other card types are unaffected.
+- Dragged cards emit particles around their edges; releasing a card creates a brief burst and plays the card-placement sound, including on invalid drops. Escape cancels without a release sound. The playback asset is a 16-bit PCM conversion of the supplied `cards_board_02_place_card.wav`. Selecting an enemy creates a damage burst, and a resolved Trap releases particles across its target row.
 - Player-facing text is in Brazilian Portuguese; card artwork labels are covered with localized names and categories.
 - Dividers separate the board rows. Drag an Axe, Spear, or Magic card to an empty cell in rows 2-3, or a Trap to an empty cell in the targeted enemy row. A valid destination row is highlighted while dragging. Invalid drops return the card to the hand; board cards cannot be manually moved.
+- Axe and Spear show a red damage penalty badge on the board when their row reduces their damage; the blue hand badge continues to show Magic bonuses separately.
 - Axe and Spear require a click on an enemy card. The cursor changes over valid targets. Escape cancels the pending play, returning the card and restoring any consumed buff. If an Axe chain has already killed enemies, Escape also undoes those attacks and restores those enemies.
-- Axe deals 4 damage, or 2 from the bottom row (row 3). If it kills a target, choose another enemy and repeat at the same damage until an enemy survives or no enemies remain.
-- Spear deals 1 damage from row 2 or 2 from row 3, then moves a surviving target to the other enemy row. It keeps its column if free, otherwise takes the nearest available column (left on a tie); if that row is full, it stays put and a message is shown.
+- Axe deals 4 damage, or 2 from the bottom row (row 3). Each resolved attack plays `attack3.wav`; canceled attacks make no attack sound. If it kills a target, choose another enemy and repeat at the same damage until an enemy survives or no enemies remain.
+- Spear plays `arrow.mp3` when its attack resolves, dealing 1 damage from row 2 or 2 from row 3, then moving a surviving target to the other enemy row. Canceled attacks make no attack sound. It keeps its column if free, otherwise takes the nearest available column (left on a tie); if that row is full, it stays put and a message is shown.
 - Trap deals 5 damage to every enemy in the row where it was placed and is removed afterward. A Trap can be played in an empty enemy row.
-- Magic adds 2 damage to the next attacking card. Bonuses stack through additional Magic cards, are shown on cards in hand, apply to every Trap target or Axe follow-up, and are consumed when the attack resolves.
+- Magic plays a 16-bit PCM conversion of `Healing Spell Impact 1.wav` when placed; canceling its pending effect stops the sound. It adds 2 damage to the next attacking card. Bonuses stack through additional Magic cards, are shown on cards in hand, apply to every Trap target or Axe follow-up, and are consumed when the attack resolves. Red particles remain around buffed hand cards and the pending attacking card on the board until their bonus is consumed or restored by cancellation.
 - The screen reports targeting, damage, buffs, and movement failures. Effects are delayed by 0.5 seconds; the final cursor asset and animations are not yet supplied.
 - Targeted cards cannot be played without an enemy. Escape also cancels a card while its first effect is waiting for the delay.
 

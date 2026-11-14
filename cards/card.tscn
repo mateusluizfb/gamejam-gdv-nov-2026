@@ -10,7 +10,7 @@ script = ExtResource("1_rjlel")
 scale = Vector2(1.25, 1.25)
 texture = ExtResource("1_kikvd")
 
-[node name="NameBackground" type="ColorRect" parent="."]
+[node name="NameBackground" type="ColorRect" parent="." unique_id=71308638]
 offset_left = -22.0
 offset_top = -50.0
 offset_right = 35.0
@@ -18,17 +18,16 @@ offset_bottom = -39.0
 mouse_filter = 2
 color = Color(0.94, 0.87, 0.67, 1)
 
-[node name="CardName" type="Label" parent="."]
+[node name="CardName" type="Label" parent="." unique_id=893997911]
 offset_left = -22.0
 offset_top = -51.0
 offset_right = 35.0
 offset_bottom = -39.0
-mouse_filter = 2
 theme_override_colors/font_color = Color(0.12, 0.09, 0.07, 1)
 theme_override_font_sizes/font_size = 9
 horizontal_alignment = 1
 
-[node name="CategoryBackground" type="ColorRect" parent="."]
+[node name="CategoryBackground" type="ColorRect" parent="." unique_id=1156332307]
 offset_left = -23.0
 offset_top = 10.0
 offset_right = 30.0
@@ -36,17 +35,16 @@ offset_bottom = 24.0
 mouse_filter = 2
 color = Color(0.16, 0.12, 0.2, 1)
 
-[node name="Category" type="Label" parent="."]
+[node name="Category" type="Label" parent="." unique_id=1015049847]
 offset_left = -23.0
 offset_top = 10.0
 offset_right = 30.0
 offset_bottom = 24.0
-mouse_filter = 2
 theme_override_colors/font_color = Color(1, 0.94, 0.8, 1)
 theme_override_font_sizes/font_size = 8
 horizontal_alignment = 1
 
-[node name="HPBackground" type="ColorRect" parent="."]
+[node name="HPBackground" type="ColorRect" parent="." unique_id=41362250]
 offset_left = -32.0
 offset_top = 24.0
 offset_right = 32.0
@@ -54,7 +52,7 @@ offset_bottom = 52.0
 mouse_filter = 2
 color = Color(0, 0, 0, 0.9)
 
-[node name="HP" type="Label" parent="."]
+[node name="HP" type="Label" parent="." unique_id=532024948]
 offset_left = -32.0
 offset_top = 31.0
 offset_right = 32.0
@@ -64,9 +62,8 @@ theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 4
 theme_override_font_sizes/font_size = 15
 horizontal_alignment = 1
-mouse_filter = 2
 
-[node name="BonusBackground" type="ColorRect" parent="."]
+[node name="BonusBackground" type="ColorRect" parent="." unique_id=160846055]
 visible = false
 offset_left = -32.0
 offset_top = -53.0
@@ -75,7 +72,7 @@ offset_bottom = -34.0
 mouse_filter = 2
 color = Color(0.13, 0.21, 0.45, 0.95)
 
-[node name="Bonus" type="Label" parent="."]
+[node name="Bonus" type="Label" parent="." unique_id=867397668]
 visible = false
 offset_left = -32.0
 offset_top = -53.0
@@ -86,4 +83,3 @@ theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 3
 theme_override_font_sizes/font_size = 13
 horizontal_alignment = 1
-mouse_filter = 2

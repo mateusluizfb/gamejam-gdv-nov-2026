@@ -7,17 +7,26 @@ const PlayerData = preload("res://game/player_data.gd")
 enum Phase { IDLE, TARGETING, RESOLVING }
 
 signal changed
+signal phase_changed
 signal card_placed(card, cell)
 signal card_returned(card, index, cell)
 signal card_removed(card)
 signal card_restored(card, cell)
 signal card_moved(card, from, to)
 signal effect_started(token)
+signal trap_triggered(row)
+signal magic_applied
+signal axe_attacked
+signal spear_attacked
 signal feedback(message)
 
 var player := PlayerData.new()
 var board: Array = []
-var phase := Phase.IDLE
+var phase := Phase.IDLE:
+	set(value):
+		if phase != value:
+			phase = value
+			phase_changed.emit()
 var damage_bonus := 0
 var pending_card: CardData
 var pending_target: CardData
@@ -129,10 +138,12 @@ func resolve_effect(token: int) -> void:
 	match card.type:
 		CardData.Type.MAGIC:
 			damage_bonus += CardData.MAGIC_BONUS
+			magic_applied.emit()
 			message = "Magia: +%d de dano ao próximo ataque (total +%d)." % [CardData.MAGIC_BONUS, damage_bonus]
 		CardData.Type.TRAP:
 			damage_bonus = 0
 			var row: int = card.board_position.y
+			trap_triggered.emit(row)
 			var hits := 0
 			for target in board[row].duplicate():
 				if target != null and target.owner == CardData.Owner.ENEMY:
@@ -151,6 +162,10 @@ func resolve_effect(token: int) -> void:
 			if card.type == CardData.Type.AXE:
 				axe_hits.append({"card": target, "cell": target.board_position, "hp": target.current_hp})
 			set_card_hp(target, target.current_hp - pending_damage)
+			if card.type == CardData.Type.AXE:
+				axe_attacked.emit()
+			else:
+				spear_attacked.emit()
 			message = "%s: %d de dano (PV do alvo: %d)." % [card.display_name(), pending_damage, target.current_hp]
 			if card.type == CardData.Type.AXE and target.current_hp <= 0 and _has_enemies():
 				pending_target = null

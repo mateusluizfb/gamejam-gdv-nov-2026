@@ -52,6 +52,7 @@ func place_cards(excluded_card: Node2D = null) -> void:
 	var hovered_index := _card_index(hovered_card)
 	for card in cards:
 		if card != null:
+			var new_card: bool = card.get_parent() == null
 			if card.get_parent() == null:
 				hand.add_child(card)
 			elif card.get_parent() != hand:
@@ -67,7 +68,11 @@ func place_cards(excluded_card: Node2D = null) -> void:
 						position.x += HOVER_SPREAD
 					else:
 						position.y -= HOVER_LIFT
-				card.position = hand.to_local(container.to_global(position))
+				var destination := hand.to_local(container.to_global(position))
+				if new_card:
+					card.position = destination
+				else:
+					card.move_to(destination)
 				_restore_transform(card)
 				card.rotation += card_angle(index)
 				if card == hovered_card:
@@ -133,6 +138,7 @@ func set_hovered(card: Node2D) -> void:
 	place_cards()
 
 func begin_drag(card: Node2D) -> void:
+	card.stop_moving()
 	hovered_card = null
 	place_cards(card)
 	_restore_transform(card)
@@ -146,10 +152,10 @@ func remove_card(card: Node2D) -> void:
 		push_error("Cannot remove a card that is not in the hand.")
 		return
 	cards.erase(card)
-	base_transforms.erase(card)
 
 func return_card(card: Node2D, index: int) -> void:
-	card.reparent(hand, false)
+	card.stop_moving()
+	card.reparent(hand, true)
 	cards.insert(index, card)
 	place_cards()
 

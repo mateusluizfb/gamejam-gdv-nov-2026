@@ -5,6 +5,11 @@
 [ext_resource type="Texture2D" uid="uid://c8woetmbw4fyq" path="res://assets/background-playmatch.png" id="2_0xm2m"]
 [ext_resource type="AudioStream" uid="uid://b25hkck58rei3" path="res://assets/audio/combate-theme.mp3" id="2_dgpao"]
 [ext_resource type="Script" uid="uid://c0ci6gx6eap7u" path="res://ui/card_tooltip.gd" id="3_tooltip"]
+[ext_resource type="AudioStream" path="res://assets/audio/card_place_pcm16.wav" id="4_card_drop"]
+[ext_resource type="AudioStream" path="res://assets/audio/attack3.wav" id="5_axe_attack"]
+[ext_resource type="AudioStream" path="res://assets/audio/magic_entry_pcm16.wav" id="6_magic_entry"]
+[ext_resource type="AudioStream" path="res://assets/audio/arrow.mp3" id="7_spear_attack"]
+[ext_resource type="Script" path="res://game/screen_effects.gd" id="8_screen_effects"]
 
 [sub_resource type="StyleBoxFlat" id="TooltipStyle"]
 bg_color = Color(0.1, 0.09, 0.12, 0.98)
@@ -35,7 +40,22 @@ script = ExtResource("1_0xm2m")
 
 [node name="Hand" type="Node2D" parent="CardManager" unique_id=1554000195]
 
+[node name="CardDropSound" type="AudioStreamPlayer" parent="CardManager"]
+stream = ExtResource("4_card_drop")
+
+[node name="AxeAttackSound" type="AudioStreamPlayer" parent="CardManager"]
+stream = ExtResource("5_axe_attack")
+
+[node name="SpearAttackSound" type="AudioStreamPlayer" parent="CardManager"]
+stream = ExtResource("7_spear_attack")
+
+[node name="MagicEntrySound" type="AudioStreamPlayer" parent="CardManager"]
+stream = ExtResource("6_magic_entry")
+
 [node name="HUD" type="CanvasLayer" parent="." unique_id=1206513264]
+
+[node name="ScreenEffects" type="CanvasLayer" parent="."]
+script = ExtResource("8_screen_effects")
 
 [node name="RestartHint" type="Label" parent="HUD" unique_id=24613470]
 anchors_preset = 1
