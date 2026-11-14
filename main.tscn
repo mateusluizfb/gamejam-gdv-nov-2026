@@ -1,0 +1,10 @@
+[gd_scene format=3 uid="uid://deotlyst3v2p8"]
+
+[ext_resource type="Script" uid="uid://dvwt6cbl7dnb6" path="res://card_manager.gd" id="1_0xm2m"]
+
+[node name="Node2D" type="Node2D" unique_id=1371408541]
+
+[node name="CardManager" type="Node2D" parent="." unique_id=767093069]
+script = ExtResource("1_0xm2m")
+
+[node name="Hand" type="Node2D" parent="CardManager" unique_id=1554000195]
