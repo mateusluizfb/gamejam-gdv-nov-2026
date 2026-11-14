@@ -26,7 +26,7 @@ func _run() -> void:
 	var background := intro.get_node("Background") as ColorRect
 	var story := intro.get_node("Story") as Label
 	var prompt := intro.get_node("Prompt") as Label
-	var fade := intro.get_node("Fade") as ColorRect
+	var material := background.material as ShaderMaterial
 	intro._input(_key(KEY_SPACE))
 	_check(current_scene == scene and not intro.visible, "Space before starting should not leave the menu.")
 	button.pressed.emit()
@@ -45,13 +45,13 @@ func _run() -> void:
 	intro._input(_key(KEY_SPACE))
 	intro._input(_key(KEY_SPACE))
 	await create_timer(0.3).timeout
-	_check(current_scene == scene and fade.modulate.a > 0.0 and fade.modulate.a < 1.0, "Scene should fade to black before changing.")
-	await create_timer(0.4).timeout
+	_check(current_scene == scene and material.get_shader_parameter("transition_mode") == 1 and material.get_shader_parameter("transition_progress") > 0.0 and material.get_shader_parameter("transition_progress") < 1.0, "A gust should cover the intro before changing scenes.")
+	await create_timer(1.0).timeout
 	_check(current_scene != null and current_scene != scene and current_scene.get_node_or_null("CardManager") != null, "Space should load the main game.")
-	_check(is_instance_valid(intro) and intro.get_parent() == root and fade.modulate.a > 0.0, "Fade should persist over the new scene.")
-	_check(not background.visible and not story.visible and not prompt.visible, "Fading out should reveal the game rather than the old intro.")
-	await create_timer(0.7).timeout
-	_check(not is_instance_valid(intro), "Transition overlay should be removed after fading in.")
+	_check(is_instance_valid(intro) and intro.get_parent() == root and background.visible and material.get_shader_parameter("transition_mode") == 2 and material.get_shader_parameter("transition_progress") > 0.0 and material.get_shader_parameter("transition_progress") < 1.0, "Gust should sweep over the new scene as it reveals the game.")
+	_check(not story.visible and not prompt.visible, "The old intro text should not appear over the game.")
+	await create_timer(1.3).timeout
+	_check(not is_instance_valid(intro), "Transition overlay should be removed after the gust reveals the game.")
 	if current_scene != null:
 		current_scene.free()
 		current_scene = null
