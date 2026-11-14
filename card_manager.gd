@@ -3,8 +3,7 @@ extends Node2D
 
 const Board = preload("res://card_board.gd")
 const Hand = preload("res://card_hand.gd")
-const GRID_ORIGIN := Vector2(450, 80)
-const GRID_GAP := 25.0
+const GRID_ORIGIN := Vector2(450, 100)
 const HAND_GAP := 40.0
 
 var CARD_SCENE: PackedScene = preload("res://card.tscn")
@@ -45,7 +44,7 @@ func _get_cell_size() -> Vector2:
 		sample_card.free()
 		push_error("Cannot lay out cards without a Sprite2D with a texture.")
 		return Vector2.ZERO
-	var size := sprite.get_rect().size * sprite.scale.abs() + Vector2.ONE * GRID_GAP
+	var size := sprite.get_rect().size * sprite.scale.abs() + Vector2(Board.COLUMN_GAP, Board.ROW_GAP)
 	sample_card.free()
 	return size
 

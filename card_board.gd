@@ -1,6 +1,9 @@
 @tool
 extends RefCounted
 
+const COLUMN_GAP := 25.0
+const ROW_GAP := 6.0
+
 var container: Node2D
 var cards: Array
 var origin: Vector2

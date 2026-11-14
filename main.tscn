@@ -1,8 +1,15 @@
 [gd_scene format=3 uid="uid://deotlyst3v2p8"]
 
 [ext_resource type="Script" uid="uid://dvwt6cbl7dnb6" path="res://card_manager.gd" id="1_0xm2m"]
+[ext_resource type="Texture2D" uid="uid://c8woetmbw4fyq" path="res://assets/background-playmatch.png" id="2_0xm2m"]
 
 [node name="Node2D" type="Node2D" unique_id=1371408541]
+
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=159291417]
+texture_filter = 3
+position = Vector2(640.99994, 360.99997)
+scale = Vector2(10, 10)
+texture = ExtResource("2_0xm2m")
 
 [node name="CardManager" type="Node2D" parent="." unique_id=767093069]
 script = ExtResource("1_0xm2m")
