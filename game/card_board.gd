@@ -57,11 +57,33 @@ func remove_card(card: Node2D, cell: Vector2i) -> bool:
 	cards[cell.y][cell.x] = null
 	return true
 
+func move_card(card: Node2D, from: Vector2i, to: Vector2i) -> bool:
+	if cards[from.y][from.x] != card or cards[to.y][to.x] != null:
+		push_error("Cannot move card between inconsistent board cells.")
+		return false
+	cards[from.y][from.x] = null
+	cards[to.y][to.x] = card
+	card.position = cell_position(to)
+	return true
+
 func center_x() -> float:
 	var columns := 0
 	for row in cards:
 		columns = maxi(columns, row.size())
 	return origin.x + (columns - 1) * cell_size.x / 2.0
+
+func draw_row_highlight(row: int) -> void:
+	var rect := Rect2(cell_position(Vector2i(0, row)) - cell_size / 2.0, Vector2(cards[row].size() * cell_size.x, cell_size.y))
+	container.draw_rect(rect, Color(0.3, 0.6, 1.0, 0.22))
+	container.draw_rect(rect, Color(0.3, 0.6, 1.0, 0.9), false, 2.0)
+
+func draw_row_dividers() -> void:
+	var columns := 0
+	for row in cards:
+		columns = maxi(columns, row.size())
+	for row in range(cards.size() - 1):
+		var start := cell_position(Vector2i(0, row)) + Vector2(-cell_size.x / 2.0, cell_size.y / 2.0)
+		container.draw_line(start, start + Vector2(columns * cell_size.x, 0), Color(0.9, 0.8, 0.55, 0.75), 2.0)
 
 func draw_preview() -> void:
 	for row in range(cards.size()):

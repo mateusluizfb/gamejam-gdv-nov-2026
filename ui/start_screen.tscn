@@ -1,0 +1,52 @@
+[gd_scene format=3 uid="uid://bedvv4bhvaapi"]
+
+[ext_resource type="Script" uid="uid://b5y0gkdbdwq7o" path="res://ui/start_screen.gd" id="1_fyqef"]
+[ext_resource type="Texture2D" uid="uid://bvjhyrntwphfm" path="res://assets/map.png" id="2_50anp"]
+[ext_resource type="AudioStream" uid="uid://iliasqrxacd6" path="res://assets/audio/click.mp3" id="3_nledq"]
+
+[node name="Control" type="Control" unique_id=75429410]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 202.0
+offset_top = 105.0
+offset_right = 202.0
+offset_bottom = 105.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_fyqef")
+
+[node name="TextureRect" type="TextureRect" parent="." unique_id=39329212]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = -0.16000001
+anchor_top = -0.15300001
+anchor_right = -0.16000001
+anchor_bottom = -0.15300001
+offset_left = -0.19998169
+offset_top = 0.16001129
+offset_right = 1279.8
+offset_bottom = 720.16003
+texture = ExtResource("2_50anp")
+
+[node name="Button" type="Button" parent="." unique_id=2083182781]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.67600006
+anchor_top = 0.179
+anchor_right = 0.67600006
+anchor_bottom = 0.179
+offset_left = -43.28009
+offset_top = -19.880005
+offset_right = 42.71991
+offset_bottom = 11.119995
+grow_horizontal = 2
+grow_vertical = 2
+text = "Novo jogo"
+
+[node name="AudioStreamPlayer2D" type="AudioStreamPlayer2D" parent="." unique_id=357792844]
+stream = ExtResource("3_nledq")
+autoplay = true
+
+[connection signal="pressed" from="Button" to="." method="_on_button_pressed"]

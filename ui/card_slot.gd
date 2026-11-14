@@ -5,4 +5,4 @@ extends PanelContainer
 
 func set_card(card_data: Dictionary) -> void:
 	card_image.texture = card_data.get("image")
-	card_name.text = str(card_data.get("name", "Empty"))
+	card_name.text = str(card_data.get("name", "Vazio"))

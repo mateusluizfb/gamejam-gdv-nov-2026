@@ -1,7 +1,7 @@
 @tool
 extends RefCounted
 
-const Board = preload("res://card_board.gd")
+const Board = preload("res://game/card_board.gd")
 const CARD_SPACING := 0.7
 const ARC_RISE := 30.0
 const ARC_ANGLE := 0.2
@@ -108,18 +108,18 @@ func _card_index(target: Node2D) -> int:
 	return -1
 
 func card_at(mouse_position: Vector2) -> Node2D:
-	if is_instance_valid(hovered_card) and _is_under_mouse(hovered_card, mouse_position):
+	if is_instance_valid(hovered_card) and card_contains_point(hovered_card, mouse_position):
 		return hovered_card
 	var children := hand.get_children()
 	children.reverse()
 	var selected: Node2D
 	for card in children:
-		if card is Node2D and cards.has(card) and _is_under_mouse(card, mouse_position):
+		if card is Node2D and cards.has(card) and card_contains_point(card, mouse_position):
 			if selected == null or card.z_index > selected.z_index:
 				selected = card
 	return selected
 
-func _is_under_mouse(card: Node2D, mouse_position: Vector2) -> bool:
+func card_contains_point(card: Node2D, mouse_position: Vector2) -> bool:
 	var sprite := card.get_node_or_null("Sprite2D") as Sprite2D
 	if sprite == null or not sprite.is_visible_in_tree():
 		return false
@@ -141,14 +141,6 @@ func begin_drag(card: Node2D) -> void:
 func end_drag(card: Node2D) -> void:
 	_restore_transform(card)
 
-func contains_drop(position: Vector2) -> bool:
-	var columns := 0
-	for row in board.cards:
-		columns = maxi(columns, row.size())
-	var width := maxf(columns, card_count()) * board.cell_size.x
-	var top := board.origin.y + (board.cards.size() - 0.5) * board.cell_size.y + hand_gap
-	return Rect2(board.center_x() - width / 2.0, top, width, board.cell_size.y).has_point(position)
-
 func remove_card(card: Node2D) -> void:
 	if not cards.has(card):
 		push_error("Cannot remove a card that is not in the hand.")
@@ -156,20 +148,10 @@ func remove_card(card: Node2D) -> void:
 	cards.erase(card)
 	base_transforms.erase(card)
 
-func add_card(card: Node2D, drop_position: Vector2) -> void:
-	var spacing := board.cell_size.x * CARD_SPACING
-	var first_position := board.center_x() - card_count() * spacing / 2.0
-	var index := clampi(floori((drop_position.x - first_position) / spacing + 0.5), 0, card_count())
-	var array_index := cards.size()
-	var occupied := 0
-	for i in range(cards.size()):
-		if cards[i] != null:
-			if occupied == index:
-				array_index = i
-				break
-			occupied += 1
+func return_card(card: Node2D, index: int) -> void:
 	card.reparent(hand, false)
-	cards.insert(array_index, card)
+	cards.insert(index, card)
+	place_cards()
 
 func draw_preview() -> void:
 	for index in range(card_count()):
