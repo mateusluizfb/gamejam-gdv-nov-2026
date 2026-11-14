@@ -11,6 +11,7 @@ const CardParticles = preload("res://game/card_particles.gd")
 const RestartFlash = preload("res://game/restart_flash.gd")
 const TargetArrow = preload("res://game/target_arrow.gd")
 const ScreenEffects = preload("res://game/screen_effects.gd")
+const EndScreen = preload("res://game/end_screen.gd")
 const CARD_SCENE: PackedScene = preload("res://cards/card.tscn")
 const STARTING_DATA_PATH := "res://starting_cards.csv"
 const GRID_ORIGIN := Vector2(450, 100)
@@ -32,6 +33,7 @@ var cursor_position := Vector2.ZERO
 @onready var spear_attack_sound: AudioStreamPlayer = $SpearAttackSound
 @onready var magic_entry_sound: AudioStreamPlayer = $MagicEntrySound
 @onready var screen_effects: ScreenEffects = $"../ScreenEffects"
+@onready var end_screen: EndScreen = $"../EndScreen"
 
 func _ready() -> void:
 	var hand_node := get_node_or_null("Hand") as Node2D
@@ -79,10 +81,13 @@ func _ready() -> void:
 	state.spear_attacked.connect(spear_attack_sound.play)
 	state.spear_attacked.connect(screen_effects.play_impact)
 	state.feedback.connect(_show_feedback)
+	state.game_finished.connect(_show_game_result)
 	board.place_cards()
 	hand_layout.place_cards()
 	cursor_position = get_viewport().get_mouse_position()
 	_refresh_state()
+	if state.outcome != GameState.Outcome.IN_PROGRESS:
+		_show_game_result(state.outcome)
 	queue_redraw()
 
 func _fail_startup(message: String) -> void:
@@ -223,6 +228,25 @@ func _show_feedback(message: String) -> void:
 	if label != null:
 		label.text = message
 
+func _show_game_result(outcome: GameState.Outcome) -> void:
+	var tooltip := get_node_or_null("../HUD/CardTooltip") as CardTooltip
+	if tooltip != null and tooltip.is_node_ready():
+		tooltip.set_hovered(null, 0)
+	if is_instance_valid(dragged_card):
+		CardParticles.stop_drag(dragged_card)
+		hand_layout.end_drag(dragged_card)
+		dragged_card = null
+		_set_highlighted_row(-1)
+		hand_layout.place_cards()
+	hand_layout.set_hovered(null)
+	Input.set_default_cursor_shape(Input.CURSOR_ARROW)
+	var enemies: Array[CardData] = []
+	for row in range(2):
+		for card in state.board[row]:
+			if card != null and card.owner == CardData.Owner.ENEMY:
+				enemies.append(card)
+	end_screen.show_result(outcome, enemies)
+
 func _exit_tree() -> void:
 	if not Engine.is_editor_hint():
 		Input.set_default_cursor_shape(Input.CURSOR_ARROW)
@@ -247,6 +271,8 @@ func _input(event: InputEvent) -> void:
 		flash.name = "RestartFlash"
 		get_tree().root.add_child(flash)
 		flash.start()
+		return
+	if state.phase == GameState.Phase.FINISHED:
 		return
 	if event.is_action_pressed("ui_cancel"):
 		if is_instance_valid(dragged_card):

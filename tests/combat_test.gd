@@ -106,7 +106,7 @@ func _test_cancellation_and_rows() -> void:
 	last_state.play_card(last_axe, Vector2i(0, 2))
 	last_state.select_target(last_enemy)
 	_resolve(last_state)
-	_check(last_state.phase == GameState.Phase.IDLE and last_state.board[0][0] == null, "Axe chain should end when all enemies are dead.")
+	_check(last_state.phase == GameState.Phase.FINISHED and last_state.outcome == GameState.Outcome.WON and last_state.board[0][0] == null, "Defeating the last enemy should end the game in victory.")
 
 	var chain_axe := _card(CardData.Type.AXE)
 	var killed := _card(CardData.Type.ELEPHANT, 1)
@@ -145,6 +145,53 @@ func _test_trap_bonus_and_full_row() -> void:
 	full_state.select_target(target)
 	_resolve(full_state)
 	_check(target.current_hp == 9 and target.board_position == Vector2i(0, 0), "Target should remain in place when the other row is full.")
+
+func _test_end_state() -> void:
+	var enemy := _card(CardData.Type.ELEPHANT)
+	var magic := _card(CardData.Type.MAGIC)
+	var losing := GameState.new([_record(enemy, Vector2i(0, 0)), _record(magic)])
+	var results := []
+	losing.game_finished.connect(func(outcome: int) -> void: results.append(outcome))
+	_check(losing.play_card(magic, Vector2i(0, 2)) and losing.player.hand.is_empty(), "Last card should be playable.")
+	_check(losing.outcome == GameState.Outcome.IN_PROGRESS, "An empty hand should not end a pending play.")
+	_check(losing.cancel_play() and losing.outcome == GameState.Outcome.IN_PROGRESS, "Canceling the last card should not end the game.")
+	_check(losing.play_card(magic, Vector2i(0, 2)), "The canceled card should be playable again.")
+	_resolve(losing)
+	_check(losing.outcome == GameState.Outcome.LOST and losing.phase == GameState.Phase.FINISHED and results == [GameState.Outcome.LOST], "Resolving the last card with enemies remaining should lose once.")
+	_check(not losing.cancel_play() and not losing.set_card_hp(enemy, 0), "A finished game should reject further gameplay.")
+
+	var axe := _card(CardData.Type.AXE)
+	var first := _card(CardData.Type.ELEPHANT, 1)
+	var second := _card(CardData.Type.ELEPHANT, 1)
+	var chain := GameState.new([_record(first, Vector2i(0, 0)), _record(second, Vector2i(1, 0)), _record(axe)])
+	_check(chain.play_card(axe, Vector2i(0, 2)) and chain.select_target(first), "Last Axe should start its chain.")
+	_resolve(chain)
+	_check(chain.phase == GameState.Phase.TARGETING and chain.outcome == GameState.Outcome.IN_PROGRESS, "A chain must finish before an empty hand causes a loss.")
+	_check(chain.cancel_play() and chain.outcome == GameState.Outcome.IN_PROGRESS and first.board_position != null, "Canceling the chain should restore the game.")
+	chain.play_card(axe, Vector2i(0, 2))
+	chain.select_target(first)
+	_resolve(chain)
+	chain.select_target(second)
+	_resolve(chain)
+	_check(chain.outcome == GameState.Outcome.WON and chain.phase == GameState.Phase.FINISHED, "Defeating the last enemy in a chain should win.")
+
+	var spear := _card(CardData.Type.SPEAR)
+	var unused := _card(CardData.Type.MAGIC)
+	var final_enemy := _card(CardData.Type.ELEPHANT, 1)
+	var winning := GameState.new([_record(final_enemy, Vector2i(0, 0)), _record(spear), _record(unused)])
+	winning.play_card(spear, Vector2i(0, 3))
+	winning.select_target(final_enemy)
+	_check(winning.outcome == GameState.Outcome.IN_PROGRESS, "Victory should wait for the attack to resolve.")
+	_resolve(winning)
+	_check(winning.outcome == GameState.Outcome.WON and winning.player.hand.has(unused), "The last enemy's defeat should win even with cards remaining.")
+	var trap := _card(CardData.Type.TRAP)
+	var trap_enemy := _card(CardData.Type.ELEPHANT, 5)
+	var trap_win := GameState.new([_record(trap_enemy, Vector2i(0, 0)), _record(trap)])
+	_check(trap_win.play_card(trap, Vector2i(1, 0)), "Final Trap should be playable.")
+	_resolve(trap_win)
+	_check(trap_win.outcome == GameState.Outcome.WON, "A final Trap that defeats the last enemy should win, not lose.")
+	_check(GameState.new([_record(_card(CardData.Type.MAGIC))]).outcome == GameState.Outcome.WON, "A game starting without enemies should be won.")
+	_check(GameState.new([_record(_card(CardData.Type.ELEPHANT), Vector2i(0, 0))]).outcome == GameState.Outcome.LOST, "A game starting with enemies and no cards should be lost.")
 
 func _button(manager: Node, position: Vector2, pressed: bool) -> void:
 	var event := InputEventMouseButton.new()
@@ -798,6 +845,76 @@ func _test_ui() -> void:
 		hand_index += 1
 	layout_scene.free()
 
+func _test_end_screens() -> void:
+	var victory_scene: Node = load("res://game/main.tscn").instantiate()
+	root.add_child(victory_scene)
+	var victory_manager = victory_scene.get_node("CardManager")
+	var victory_state = victory_manager.state
+	var last: CardData = victory_state.board[1][1]
+	victory_state.set_card_hp(victory_state.board[0][0], 0)
+	victory_state.set_card_hp(victory_state.board[0][1], 0)
+	_check(not victory_scene.get_node("EndScreen").panel.visible, "Victory should wait until the last enemy is defeated.")
+	var dragged: Node2D = victory_manager.hand_layout.cards[0]
+	_button(victory_manager, dragged.get_global_transform_with_canvas() * Vector2.ZERO, true)
+	victory_state.set_card_hp(last, 0)
+	var victory = victory_scene.get_node("EndScreen")
+	_check(victory_state.outcome == GameState.Outcome.WON and victory.panel.visible and victory.title.text == "VITÓRIA!" and victory.herd.get_child_count() == 0, "Victory should show its large message without a herd.")
+	_check(victory_manager.dragged_card == null and not dragged.get_node("DragAura").visible, "Victory should stop any active drag.")
+	victory_scene.free()
+
+	var scene: Node = load("res://game/main.tscn").instantiate()
+	root.add_child(scene)
+	current_scene = scene
+	var manager = scene.get_node("CardManager")
+	var state = manager.state
+	var enemy: CardData = state.board[0][0]
+	var magic: CardData = state.player.hand[2]
+	var axe: CardData = state.player.hand[0]
+	var spear: CardData = state.player.hand[1]
+	var trap: CardData = state.player.hand[3]
+	_check(state.play_card(magic, Vector2i(0, 2)), "Magic should be playable in the loss scenario.")
+	_resolve(state)
+	_check(state.play_card(axe, Vector2i(1, 2)) and state.select_target(enemy), "Axe should be playable in the loss scenario.")
+	_resolve(state)
+	_check(state.play_card(spear, Vector2i(2, 2)) and state.select_target(enemy), "Spear should be playable in the loss scenario.")
+	_resolve(state)
+	_check(state.play_card(trap, Vector2i(2, 0)), "The final Trap should be playable in the loss scenario.")
+	_check(state.outcome == GameState.Outcome.IN_PROGRESS, "Defeat should wait for the final Trap.")
+	_resolve(state)
+	var end_screen = scene.get_node("EndScreen")
+	_check(state.outcome == GameState.Outcome.LOST and end_screen.panel.visible and end_screen.title.text == "DERROTA", "Defeat should show the loss screen.")
+	var cards: Array[Node] = end_screen.herd.get_children()
+	_check(cards.size() > 20, "Defeat should spawn a herd of enemy cards.")
+	if not cards.is_empty():
+		var first_card: Node2D = cards[0]
+		var start_y := first_card.position.y
+		_check(start_y < 0.0, "Herd cards should start above the screen.")
+		await create_timer(0.3).timeout
+		_check(first_card.position.y > start_y and first_card.scale.x > 0.7, "Herd cards should move down and grow toward the player.")
+		await create_timer(3.0).timeout
+		var bounds := Rect2()
+		var first_bounds := true
+		for card in cards:
+			var sprite := card.get_node("Sprite2D") as Sprite2D
+			var card_size: Vector2 = sprite.get_rect().size * sprite.scale.abs() * card.scale.abs()
+			var card_bounds := Rect2(card.position - card_size / 2.0, card_size)
+			bounds = card_bounds if first_bounds else bounds.merge(card_bounds)
+			first_bounds = false
+		var viewport_size := root.get_visible_rect().size
+		_check(bounds.position.x <= 0.0 and bounds.position.y <= 0.0 and bounds.end.x >= viewport_size.x and bounds.end.y >= viewport_size.y, "The herd should cover the viewport.")
+	var restart := InputEventKey.new()
+	restart.keycode = KEY_R
+	restart.pressed = true
+	manager._input(restart)
+	await create_timer(0.75).timeout
+	_check(current_scene != null and current_scene != scene, "Restart should work after defeat.")
+	if current_scene != null and current_scene != scene:
+		_check(current_scene.get_node("CardManager").state.outcome == GameState.Outcome.IN_PROGRESS and not current_scene.get_node("EndScreen").panel.visible, "Restart should clear the end screen and restore the game.")
+	await create_timer(0.7).timeout
+	if current_scene != null:
+		current_scene.free()
+		current_scene = null
+
 func _test_restart() -> void:
 	var scene: Node = load("res://game/main.tscn").instantiate()
 	root.add_child(scene)
@@ -945,6 +1062,7 @@ func _run() -> void:
 	_test_effects()
 	_test_cancellation_and_rows()
 	_test_trap_bonus_and_full_row()
+	_test_end_state()
 	_test_row_highlight()
 	await _test_row_penalty_badges()
 	_test_elephant_water_material()
@@ -959,6 +1077,7 @@ func _run() -> void:
 	await _test_targeting_effects()
 	await _test_tooltips()
 	await _test_ui()
+	await _test_end_screens()
 	await _test_restart()
 	if not failed:
 		print("Combat checks passed.")

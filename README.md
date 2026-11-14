@@ -1,3 +1,8 @@
+## Objetivo
+
+Jogue todas as cartas: se ainda houver inimigos, você perde. Ao derrotar o último inimigo, você vence imediatamente. Pressione R para reiniciar.
+
+No menu, selecione "Novo jogo" e pressione espaço após a introdução para começar.
 
 https://willosuna.itch.io/pixel-cards-deckbuilder-kit-lite
 https://pixabay.com/music/solo-instruments-african-drums-209632/

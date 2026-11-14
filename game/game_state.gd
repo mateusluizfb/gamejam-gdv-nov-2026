@@ -4,7 +4,8 @@ extends RefCounted
 const CardData = preload("res://cards/card_data.gd")
 const PlayerData = preload("res://game/player_data.gd")
 
-enum Phase { IDLE, TARGETING, RESOLVING }
+enum Phase { IDLE, TARGETING, RESOLVING, FINISHED }
+enum Outcome { IN_PROGRESS, WON, LOST }
 
 signal changed
 signal phase_changed
@@ -19,6 +20,7 @@ signal magic_applied
 signal axe_attacked
 signal spear_attacked
 signal feedback(message)
+signal game_finished(outcome)
 
 var player := PlayerData.new()
 var board: Array = []
@@ -35,6 +37,7 @@ var pending_hand_index := -1
 var pending_original_bonus := 0
 var axe_hits: Array = []
 var effect_token := 0
+var outcome := Outcome.IN_PROGRESS
 
 func _init(records: Array) -> void:
 	for row in range(4):
@@ -47,6 +50,7 @@ func _init(records: Array) -> void:
 		else:
 			card.board_position = cell
 			board[cell.y][cell.x] = card
+	_check_end_state()
 
 func _valid_placement(card: CardData, cell: Vector2i) -> bool:
 	if phase != Phase.IDLE or not player.hand.has(card) or card.owner != CardData.Owner.PLAYER:
@@ -179,6 +183,19 @@ func resolve_effect(token: int) -> void:
 	_reset_pending()
 	changed.emit()
 	feedback.emit(message)
+	_check_end_state()
+
+func _check_end_state() -> void:
+	if outcome != Outcome.IN_PROGRESS or phase != Phase.IDLE:
+		return
+	if not _has_enemies():
+		outcome = Outcome.WON
+	elif player.hand.is_empty():
+		outcome = Outcome.LOST
+	else:
+		return
+	phase = Phase.FINISHED
+	game_finished.emit(outcome)
 
 func _reset_pending() -> void:
 	phase = Phase.IDLE
@@ -221,6 +238,8 @@ func _move_enemy_to_other_row(card: CardData) -> bool:
 	return true
 
 func set_card_hp(card: CardData, hp: int) -> bool:
+	if outcome != Outcome.IN_PROGRESS:
+		return false
 	if card.board_position == null:
 		push_error("Cannot change HP on a card outside the board.")
 		return false
@@ -232,6 +251,7 @@ func set_card_hp(card: CardData, hp: int) -> bool:
 	if hp <= 0:
 		_remove_board_card(card)
 	changed.emit()
+	_check_end_state()
 	return true
 
 func _remove_board_card(card: CardData) -> void:

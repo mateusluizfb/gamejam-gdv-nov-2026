@@ -1,3 +1,30 @@
-# Godot 4+ specific ignores
-.godot/
+# Godot editor and import cache (keep .import and .uid files)
+/.godot/
+/.import/
+export_credentials.cfg
+
+# Generated builds and exports
 /android/
+/build/
+/dist/
+/exports/
+*.exe
+*.pck
+*.apk
+*.aab
+*.app/
+
+# C# build and IDE caches
+/.mono/
+/bin/
+/obj/
+/.vs/
+*.user
+
+# OS and editor temporary files
+.DS_Store
+Thumbs.db
+Desktop.ini
+*~
+*.swp
+*.swo

@@ -10,6 +10,7 @@
 [ext_resource type="AudioStream" path="res://assets/audio/magic_entry_pcm16.wav" id="6_magic_entry"]
 [ext_resource type="AudioStream" path="res://assets/audio/arrow.mp3" id="7_spear_attack"]
 [ext_resource type="Script" path="res://game/screen_effects.gd" id="8_screen_effects"]
+[ext_resource type="Script" path="res://game/end_screen.gd" id="9_end_screen"]
 
 [sub_resource type="StyleBoxFlat" id="TooltipStyle"]
 bg_color = Color(0.1, 0.09, 0.12, 0.98)
@@ -34,6 +35,9 @@ texture_filter = 3
 position = Vector2(640.99994, 360.99997)
 scale = Vector2(10, 10)
 texture = ExtResource("2_0xm2m")
+
+[node name="EndScreen" type="CanvasLayer" parent="."]
+script = ExtResource("9_end_screen")
 
 [node name="CardManager" type="Node2D" parent="." unique_id=767093069]
 script = ExtResource("1_0xm2m")
