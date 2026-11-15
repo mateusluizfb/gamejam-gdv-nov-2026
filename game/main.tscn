@@ -15,6 +15,7 @@
 [ext_resource type="AudioStream" uid="uid://gn24bx3tlpa8" path="res://assets/audio/stomp.mp3" id="11_trap_sound"]
 
 [sub_resource type="ShaderMaterial" id="FieldMistMaterial"]
+resource_local_to_scene = true
 shader = ExtResource("10_field_mist")
 shader_parameter/board_bounds = Vector4(0.1328125, 0.05555556, 0.8671875, 0.7083333)
 
@@ -36,12 +37,18 @@ volume_db = -20.958
 stream = ExtResource("2_dgpao")
 autoplay = true
 
-[node name="Sprite2D" type="Sprite2D" parent="." unique_id=159291417]
+[node name="BackgroundLayer" type="CanvasLayer" parent="."]
+layer = -1
+
+[node name="Background" type="TextureRect" parent="BackgroundLayer" unique_id=159291417]
 texture_filter = 3
 material = SubResource("FieldMistMaterial")
-position = Vector2(640.99994, 360.99997)
-scale = Vector2(10, 10)
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
 texture = ExtResource("2_0xm2m")
+expand_mode = 1
 
 [node name="EndScreen" type="CanvasLayer" parent="." unique_id=1674821736]
 script = ExtResource("9_end_screen")

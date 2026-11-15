@@ -18,7 +18,7 @@ const MAGIC_BURN_SHADER: Shader = preload("res://cards/magic_burn.gdshader")
 const STARTING_DATA_PATH := "res://starting_cards.csv"
 const GRID_ORIGIN := Vector2(467, 104)
 const GRID_SCALE := 0.9
-const HAND_GAP := 40.0
+const HAND_GAP := 18.0
 const EFFECT_DELAY := 0.5
 const MAGIC_BURN_DURATION := 0.6
 const BOARD_HOVER_SCALE := 1.25
@@ -70,6 +70,11 @@ func _ready() -> void:
 			view_row.append(_new_card_view(card) if card != null and not Engine.is_editor_hint() else null)
 		board_views.append(view_row)
 	board = Board.new(self, board_views, GRID_ORIGIN, cell_size)
+	var background := get_node_or_null("../BackgroundLayer/Background") as TextureRect
+	if background != null and background.material is ShaderMaterial:
+		var last_row := board.cell_position(Vector2i(0, board_views.size() - 1))
+		var grid_bottom := to_global(last_row + Vector2(0.0, cell_size.y * 0.5)).y
+		background.material.set_shader_parameter("board_bottom", (grid_bottom + 8.0) / 720.0)
 	var hand_views: Array = []
 	var hand_scenes: Array[PackedScene] = []
 	for card in state.player.hand:

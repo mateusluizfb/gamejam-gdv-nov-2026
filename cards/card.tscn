@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://bde166h67l4lo"]
 
-[ext_resource type="Texture2D" uid="uid://1621ptcp3wpn" path="res://assets/x1/action_cards/attack/cleave.png" id="1_kikvd"]
+[ext_resource type="Texture2D" path="res://assets/cards/Guerreiro.png" id="1_kikvd"]
 [ext_resource type="Script" uid="uid://do04btrux708r" path="res://cards/card.gd" id="1_rjlel"]
 
 [node name="Card" type="Node2D" unique_id=798521650]
@@ -11,40 +11,6 @@ script = ExtResource("1_rjlel")
 texture_filter = 1
 scale = Vector2(1.25, 1.25)
 texture = ExtResource("1_kikvd")
-
-[node name="NameBackground" type="ColorRect" parent="." unique_id=71308638]
-offset_left = -22.0
-offset_top = -50.0
-offset_right = 35.0
-offset_bottom = -39.0
-mouse_filter = 2
-color = Color(0.94, 0.87, 0.67, 1)
-
-[node name="CardName" type="Label" parent="." unique_id=893997911]
-offset_left = -22.0
-offset_top = -51.0
-offset_right = 35.0
-offset_bottom = -39.0
-theme_override_colors/font_color = Color(0.12, 0.09, 0.07, 1)
-theme_override_font_sizes/font_size = 9
-horizontal_alignment = 1
-
-[node name="CategoryBackground" type="ColorRect" parent="." unique_id=1156332307]
-offset_left = -23.0
-offset_top = 10.0
-offset_right = 30.0
-offset_bottom = 24.0
-mouse_filter = 2
-color = Color(0.16, 0.12, 0.2, 1)
-
-[node name="Category" type="Label" parent="." unique_id=1015049847]
-offset_left = -23.0
-offset_top = 10.0
-offset_right = 30.0
-offset_bottom = 24.0
-theme_override_colors/font_color = Color(1, 0.94, 0.8, 1)
-theme_override_font_sizes/font_size = 8
-horizontal_alignment = 1
 
 [node name="BonusBackground" type="ColorRect" parent="." unique_id=160846055]
 visible = false
@@ -76,11 +42,6 @@ theme_override_font_sizes/font_size = 13
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="Hexagon" type="Polygon2D" parent="HP"]
-show_behind_parent = true
-color = Color(0.92, 0.88, 0.78, 1)
-polygon = PackedVector2Array(1, 10, 6.5, 1, 17.5, 1, 23, 10, 17.5, 19, 6.5, 19)
-
 [node name="Attack" type="Label" parent="."]
 offset_right = 24.0
 offset_bottom = 20.0
@@ -89,8 +50,3 @@ theme_override_colors/font_color = Color(0, 0, 0, 1)
 theme_override_font_sizes/font_size = 13
 horizontal_alignment = 1
 vertical_alignment = 1
-
-[node name="Hexagon" type="Polygon2D" parent="Attack"]
-show_behind_parent = true
-color = Color(0.92, 0.88, 0.78, 1)
-polygon = PackedVector2Array(1, 10, 6.5, 1, 17.5, 1, 23, 10, 17.5, 19, 6.5, 19)

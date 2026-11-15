@@ -4,7 +4,7 @@ signal finished
 signal finishing
 
 const Text = preload("res://data/text.gd")
-const SPAWN_SHADER: Shader = preload("res://ui/card_preview_spawn.gdshader")
+const STORY_SMOKE_SHADER: Shader = preload("res://ui/story_smoke.gdshader")
 const SPAWN_DURATION := 0.6
 const VANISH_DURATION := 0.3
 const FADE_DURATION := 0.6
@@ -52,7 +52,7 @@ func _ready() -> void:
 	text_display.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	text_display.texture = text_viewport.get_texture()
 	text_material = ShaderMaterial.new()
-	text_material.shader = SPAWN_SHADER
+	text_material.shader = STORY_SMOKE_SHADER
 	text_display.material = text_material
 	add_child(text_display)
 	text_display.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)

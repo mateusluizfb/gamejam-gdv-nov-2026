@@ -77,7 +77,7 @@ func _run() -> void:
 	_check(scene.opening_state == scene.OpeningState.STORY and opening_story.label.text == Text.get_text("opening_paragraph_1") and opening_story.paragraphs.size() == 3, "Space should open the first of three opening paragraphs.")
 	_check(opening_story.label.bbcode_enabled and opening_story.label.get_theme_font("italics_font") is FontVariation, "Story text should render the requested italics.")
 	_check(opening_story.prompt.visible and opening_story.prompt.text == "Aperte ESPACO para continuar" and opening_story.prompt.anchor_top == 1.0, "The opening story should show a bottom Space hint.")
-	_check((opening_story.get_child(0) as ColorRect).color == Color.BLACK and opening_story.text_material.shader == load("res://ui/card_preview_spawn.gdshader"), "The story should use a black background and the card preview shader.")
+	_check((opening_story.get_child(0) as ColorRect).color == Color.BLACK and opening_story.text_material.shader == load("res://ui/story_smoke.gdshader"), "The story should use a black background and its smoke shader.")
 	_check(wind_audio.playing and not menu_audio.playing and not mist.visible, "The menu should remain hidden during the opening story.")
 	root.push_input(_key(KEY_SPACE))
 	await create_timer(0.3).timeout

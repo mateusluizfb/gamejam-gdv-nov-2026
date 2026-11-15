@@ -46,7 +46,7 @@ func _test_loader() -> void:
 		["duplicate cell", valid.replace("elephant,enemy,board,0,1", "elephant,enemy,board,0,0")],
 		["wrong side", valid.replace("elephant,enemy,board,0,0", "elephant,enemy,board,2,0")],
 		["wrong zone", valid.replace("axe,player,hand,,,", "axe,player,board,2,0,")],
-		["inconsistent player hp", valid + "axe,player,hand,,,5,res://assets/x1/action_cards/attack/cleave.png,,\n"],
+		["inconsistent player hp", valid + "axe,player,hand,,,5,res://assets/cards/Guerreiro.png,,\n"],
 		["inconsistent image", valid.replace("elephant,enemy,board,0,0,10,res://assets/cards/elefante.png", "elephant,enemy,board,0,0,10,res://assets/x1/action_cards/attack/cleave.png")],
 		["invalid hp", valid.replace("elephant,enemy,board,0,0,10", "elephant,enemy,board,0,0,0")],
 		["bad image", valid.replace("res://assets/cards/elefante.png", "res://missing.png")],

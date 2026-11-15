@@ -304,10 +304,13 @@ func _test_row_penalty_badges() -> void:
 	var spear: Node2D = manager.hand_layout.cards[1]
 	var badge := axe.get_node("Bonus") as Label
 	var background := axe.get_node("BonusBackground") as ColorRect
+	var attack := axe.get_node("Attack") as Label
 
 	_check(state.play_card(axe.data, Vector2i(0, 2)) and not badge.visible, "Upper-row Axe should have no row penalty badge.")
 	state.cancel_play()
 	_check(state.play_card(axe.data, Vector2i(0, 3)) and badge.visible and badge.text == "-2 DANO" and background.color.r > background.color.b, "Bottom-row Axe should show its damage penalty.")
+	var reduced_color := attack.get_theme_color("font_color")
+	_check(attack.text == "2" and reduced_color.r > reduced_color.g, "Attack below its natural strength should be red.")
 	state.cancel_play()
 	_check(not badge.visible, "Returning a card to the hand should remove its row penalty.")
 
@@ -315,6 +318,7 @@ func _test_row_penalty_badges() -> void:
 	state.changed.emit()
 	_check(badge.visible and badge.text == "+2 DANO" and background.color.b > background.color.r, "Hand cards should continue to show the Magic bonus in blue.")
 	_check(state.play_card(axe.data, Vector2i(0, 3)) and badge.text == "-2 DANO", "The row penalty should remain visible independently of a Magic bonus.")
+	_check(attack.text == "4" and attack.get_theme_color("font_color") == Color.BLACK, "A bonus that offsets a penalty should restore the neutral attack color.")
 	state.cancel_play()
 	_check(badge.text == "+2 DANO" and background.color.b > background.color.r, "Canceling a play should restore the Magic badge.")
 	state.damage_bonus = 0
@@ -1128,7 +1132,7 @@ func _test_preview_spawn() -> void:
 	_motion(manager, axe.get_global_transform_with_canvas() * Vector2.ZERO)
 	await create_timer(0.35).timeout
 	var progress: float = tooltip.spawn_material.get_shader_parameter("spawn_progress")
-	_check(tooltip.visible and progress > 0.0 and progress < 1.0 and tooltip.preview.name_label.modulate.a > 0.0 and tooltip.preview.name_label.modulate.a < 1.0 and is_equal_approx(tooltip.preview.modulate.a, 1.0), "Wind should reveal the card while its labels fade in independently.")
+	_check(tooltip.visible and progress > 0.0 and progress < 1.0 and tooltip.preview.hp_label.modulate.a > 0.0 and tooltip.preview.hp_label.modulate.a < 1.0 and is_equal_approx(tooltip.preview.modulate.a, 1.0), "Wind should reveal the card while its labels fade in independently.")
 	tooltip.refresh()
 	_check(is_equal_approx(tooltip.spawn_material.get_shader_parameter("spawn_progress"), progress), "Refreshing a preview should not restart its spawn animation.")
 	_motion(manager, spear.get_global_transform_with_canvas() * Vector2.ZERO)
@@ -1140,7 +1144,7 @@ func _test_preview_spawn() -> void:
 	progress = tooltip.spawn_material.get_shader_parameter("spawn_progress")
 	_check(tooltip.visible and tooltip.preview.data == spear.data and progress > 0.0 and progress < 1.0, "The next card should begin a new spawn animation.")
 	await create_timer(0.65).timeout
-	_check(is_equal_approx(tooltip.spawn_material.get_shader_parameter("spawn_progress"), 1.0) and is_equal_approx(tooltip.preview.name_label.modulate.a, 1.0), "The spawn animation should finish with the card fully visible.")
+	_check(is_equal_approx(tooltip.spawn_material.get_shader_parameter("spawn_progress"), 1.0) and is_equal_approx(tooltip.preview.hp_label.modulate.a, 1.0), "The spawn animation should finish with the card fully visible.")
 	_motion(manager, Vector2.ZERO)
 	_check(not tooltip.visible and tooltip.preview.visible, "Leaving the card should hide the description while the preview disappears.")
 	await create_timer(0.15).timeout
@@ -1171,7 +1175,7 @@ func _test_tooltips() -> void:
 	await create_timer(0.2).timeout
 	_check(not tooltip.visible, "Changing cards should restart the tooltip delay.")
 	await create_timer(0.15).timeout
-	_check(tooltip.visible and name_label.text == "Lança", "Hovering a hand card should show its tooltip after the delay.")
+	_check(tooltip.visible and name_label.text == "Caçador", "Hovering a hand card should show its tooltip after the delay.")
 	await process_frame
 	await process_frame
 	_check(text.get_global_rect().position.y - name_label.get_global_rect().end.y >= 12.0 and not bonus_label.visible, "The name and effect should have visible spacing without an empty bonus section.")
@@ -1210,6 +1214,8 @@ func _test_tooltips() -> void:
 	tooltip.refresh()
 	_check(preview.damage_bonus == 2 and preview.bonus_label.text == spear.bonus_label.text, "Preview should update the displayed damage bonus.")
 	_check(preview.attack_label.text == "4" and spear.attack_label.text == "4", "The spear and its preview should show the boosted attack in the bottom hexagon.")
+	var boosted_color: Color = spear.attack_label.get_theme_color("font_color")
+	_check(boosted_color.g > boosted_color.r and preview.attack_label.get_theme_color("font_color") == boosted_color, "The boosted attack should be green on the card and in its preview.")
 	_check(text.get_content_height() <= text.size.y, "Tooltip text must fit without clipping.")
 	_check(tooltip._effect_description(axe.data, 2).contains("]6[/color] de dano") and tooltip._effect_description(axe.data, 2).contains("]4[/color] na linha 4"), "Axe tooltip should include its bonus on both rows.")
 	_check(tooltip._effect_description(trap.data, 2).contains("]7[/color] de dano"), "Trap tooltip should include the active bonus.")
@@ -1236,7 +1242,7 @@ func _test_tooltips() -> void:
 	manager.state.set_card_hp(enemy.data, 7)
 	_check(text.text.contains("]7[/color]"), "An open enemy tooltip should update its HP.")
 	_check(preview.hp_label.text == enemy.hp_label.text, "Preview should update the enemy's HP.")
-	_check(preview.hp_label.text == "7" and preview.attack_label.text == "20" and enemy.attack_label.text == "20" and not preview.get_node("HP/Hexagon").visible, "The elephant and its preview should show strength 20 in the printed hexagon.")
+	_check(preview.hp_label.text == "7" and preview.attack_label.text == "20" and enemy.attack_label.text == "20", "The elephant and its preview should show strength 20 in the printed hexagon.")
 	manager.position = Vector2(-450, -100)
 	await process_frame
 	var bounds: Rect2 = root.get_visible_rect()
