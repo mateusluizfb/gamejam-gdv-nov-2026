@@ -5,6 +5,12 @@ const PATH := "res://data/text.cfg"
 
 static var config: ConfigFile
 
+static func set_story_italics(label: RichTextLabel) -> void:
+	var italics := FontVariation.new()
+	italics.base_font = label.get_theme_default_font()
+	italics.variation_transform = Transform2D(Vector2(1.0, 0.0), Vector2(-0.25, 1.0), Vector2.ZERO)
+	label.add_theme_font_override("italics_font", italics)
+
 static func get_text(key: String) -> String:
 	if config == null:
 		config = ConfigFile.new()

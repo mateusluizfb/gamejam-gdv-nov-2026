@@ -15,7 +15,7 @@ var paragraph_index := 0
 var transitioning := false
 var complete := false
 var background: ColorRect
-var label: Label
+var label: RichTextLabel
 var prompt: Label
 var text_material: ShaderMaterial
 var text_viewport: SubViewport
@@ -33,12 +33,16 @@ func _ready() -> void:
 	text_viewport.transparent_bg = true
 	text_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	add_child(text_viewport)
-	label = Label.new()
+	label = RichTextLabel.new()
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.bbcode_enabled = true
+	label.scroll_active = false
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	label.add_theme_font_size_override("font_size", 34)
+	label.add_theme_font_size_override("normal_font_size", 34)
+	label.add_theme_font_size_override("italics_font_size", 34)
 	text_viewport.add_child(label)
+	Text.set_story_italics(label)
 	label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	label.offset_left = 100.0
 	label.offset_right = -100.0

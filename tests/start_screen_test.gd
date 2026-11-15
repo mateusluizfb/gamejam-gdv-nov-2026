@@ -55,7 +55,8 @@ func _run() -> void:
 	_check(wind_audio.playing and not menu_audio.playing and not gust_audio.playing, "Other keys should not change the opening audio.")
 	root.push_input(_key(KEY_SPACE))
 	var opening_story = scene.get_node("StoryScreen")
-	_check(scene.opening_state == scene.OpeningState.STORY and opening_story.label.text == "placeholder paragraph 1", "Space should open the first paragraph on the black screen.")
+	_check(scene.opening_state == scene.OpeningState.STORY and opening_story.label.text == Text.get_text("opening_paragraph_1") and opening_story.paragraphs.size() == 3, "Space should open the first of three opening paragraphs.")
+	_check(opening_story.label.bbcode_enabled and opening_story.label.get_theme_font("italics_font") is FontVariation, "Story text should render the requested italics.")
 	_check(opening_story.prompt.visible and opening_story.prompt.text == "Aperte ESPACO para continuar" and opening_story.prompt.anchor_top == 1.0, "The opening story should show a bottom Space hint.")
 	_check((opening_story.get_child(0) as ColorRect).color == Color.BLACK and opening_story.text_material.shader == load("res://ui/card_preview_spawn.gdshader"), "The story should use a black background and the card preview shader.")
 	_check(wind_audio.playing and not menu_audio.playing and not mist.visible, "The menu should remain hidden during the opening story.")
@@ -71,7 +72,8 @@ func _run() -> void:
 	for index in range(1, 3):
 		root.push_input(_key(KEY_SPACE))
 		await create_timer(1.0).timeout
-		_check(opening_story.paragraph_index == index and opening_story.label.text == "placeholder paragraph %d" % (index + 1), "Each Space should advance exactly one opening paragraph.")
+		_check(opening_story.paragraph_index == index and opening_story.label.text == Text.get_text("opening_paragraph_%d" % (index + 1)), "Each Space should advance exactly one opening paragraph.")
+		_check(opening_story.label.get_content_height() <= opening_story.label.size.y - 220.0, "Opening paragraphs should fit above the bottom prompt.")
 	root.push_input(_key(KEY_SPACE))
 	await create_timer(0.6).timeout
 	_check(scene.opening_state == scene.OpeningState.REVEALING and is_zero_approx(opening_prompt.modulate.a), "The initial prompt must not reappear when the story ends.")
@@ -86,7 +88,7 @@ func _run() -> void:
 	await create_timer(1.0).timeout
 	_check(scene.opening_state == scene.OpeningState.FINISHED and not opening.visible and not button.disabled, "The menu should become usable after the clouds clear.")
 	var background := intro.get_node("Background") as ColorRect
-	var story := intro.get_node("Story") as Label
+	var story := intro.get_node("Story") as RichTextLabel
 	var prompt := intro.get_node("Prompt") as Label
 	var material := background.material as ShaderMaterial
 	intro._input(_key(KEY_SPACE))
@@ -96,12 +98,13 @@ func _run() -> void:
 	_check(button.disabled and intro.visible and intro.intro_state == intro.IntroState.REVEALING, "New game should start the intro once.")
 	_check(mist.visible, "Mist should remain visible over the intro.")
 	_check(background.anchor_right == 1.0 and background.anchor_bottom == 1.0 and background.material is ShaderMaterial, "Intro shader should cover the viewport.")
-	_check(story.text == "Para finalizar o monumento seus guerreiros precisam passar pelos elefantes para buscar o marfim restante" and prompt.text == "Pressione espaço para continuar", "Intro should display the requested story and space prompt.")
+	_check(story.text == Text.get_text("intro_story") and story.text.contains("novo [i]soba[/i]") and story.bbcode_enabled and story.get_theme_font("italics_font") is FontVariation and prompt.text == "Pressione espaço para continuar", "Intro should display the new story with italicized soba and the space prompt.")
 	intro._input(_key(KEY_SPACE))
 	await create_timer(0.3).timeout
 	_check(current_scene == scene and intro.wind_progress > 0.0 and intro.wind_progress < 1.0, "Purple wind should sweep across the screen before accepting input.")
 	await create_timer(1.3).timeout
 	_check(is_equal_approx(intro.wind_progress, 1.0) and intro.intro_state == intro.IntroState.WAITING and is_equal_approx(prompt.modulate.a, 1.0), "Wind should finish and prompt should be visible before waiting for Space.")
+	_check(story.get_content_height() <= story.size.y and story.get_global_rect().end.y <= prompt.get_global_rect().position.y, "The complete intro should fit without overlapping the prompt.")
 	intro._input(_key(KEY_ENTER))
 	intro._input(_key(KEY_SPACE, true))
 	_check(intro.intro_state == intro.IntroState.WAITING, "Only a fresh Space press should continue.")

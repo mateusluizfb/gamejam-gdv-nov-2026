@@ -12,6 +12,7 @@
 [ext_resource type="Script" uid="uid://cn2l046w0psxp" path="res://game/screen_effects.gd" id="8_screen_effects"]
 [ext_resource type="Script" uid="uid://rfc3lt3f4sb3" path="res://game/end_screen.gd" id="9_end_screen"]
 [ext_resource type="Shader" uid="uid://bpjbgoenj8qpt" path="res://game/field_mist.gdshader" id="10_field_mist"]
+[ext_resource type="AudioStream" path="res://assets/audio/stomp.mp3" id="11_trap_sound"]
 
 [sub_resource type="ShaderMaterial" id="FieldMistMaterial"]
 shader = ExtResource("10_field_mist")
@@ -28,6 +29,7 @@ border_color = Color(0.84, 0.67, 0.35, 1)
 
 [node name="ElephantSound" type="AudioStreamPlayer2D" parent="." unique_id=671583148]
 stream = ExtResource("1_5un7r")
+volume_db = -20.958
 
 [node name="AudioStreamPlayer2D" type="AudioStreamPlayer2D" parent="." unique_id=1046565003]
 stream = ExtResource("2_dgpao")
@@ -59,6 +61,9 @@ stream = ExtResource("7_spear_attack")
 
 [node name="MagicEntrySound" type="AudioStreamPlayer" parent="CardManager" unique_id=1268555271]
 stream = ExtResource("6_magic_entry")
+
+[node name="TrapSound" type="AudioStreamPlayer" parent="CardManager"]
+stream = ExtResource("11_trap_sound")
 
 [node name="HUD" type="CanvasLayer" parent="." unique_id=1206513264]
 

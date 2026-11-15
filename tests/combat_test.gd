@@ -604,13 +604,16 @@ func _test_particles() -> void:
 	_check(enemy.data.current_hp == original_hp, "Canceling a target selection should still prevent delayed damage.")
 
 	var trap: Node2D = manager.hand_layout.cards[-1]
+	var trap_sound := manager.get_node("TrapSound") as AudioStreamPlayer
+	_check(trap_sound.stream != null and trap_sound.stream.resource_path == "res://assets/audio/stomp.mp3" and trap_sound.stream.get_length() > 0.0, "Trap sound should load the requested audio.")
 	_drag(manager, trap, board.cell_position(Vector2i(2, 0)))
-	_check(manager.get_node_or_null("TrapAura") == null, "Trap particles should wait until the effect resolves.")
+	_check(manager.get_node_or_null("TrapAura") == null and not trap_sound.playing, "Trap particles and sound should wait until the effect resolves.")
 	_escape(manager)
 	await create_timer(0.65).timeout
-	_check(manager.get_node_or_null("TrapAura") == null, "A canceled Trap should not create a row effect.")
+	_check(manager.get_node_or_null("TrapAura") == null and not trap_sound.playing, "A canceled Trap should not create a row effect or play the sound.")
 	_drag(manager, trap, board.cell_position(Vector2i(2, 1)))
 	await create_timer(0.55).timeout
+	_check(trap_sound.playing, "The Trap should play its sound when its effect resolves.")
 	var row_particles := manager.get_node_or_null("TrapAura") as ColorRect
 	var row_size := Vector2(board.cards[1].size() * board.cell_size.x, board.cell_size.y)
 	var row_center: Vector2 = board.cell_position(Vector2i(0, 1)) - board.cell_size / 2.0 + row_size / 2.0
@@ -904,6 +907,7 @@ func _test_result_story(end_screen: Node, prefix: String) -> void:
 		Text.config.set_value("text", prefix + "_paragraph_2", original)
 		return
 	_check(story.label.text == Text.get_text(prefix + "_paragraph_1") and story.layer > end_screen.layer, "The result story should cover the result with its first paragraph.")
+	_check(story.paragraphs.size() == 3, "The result story should contain three paragraphs.")
 	_check(story.prompt.visible and story.prompt.text == "Aperte ESPACO para continuar" and story.prompt.anchor_top == 1.0, "Result paragraphs should show the bottom Space hint.")
 	root.push_input(space)
 	await create_timer(0.3).timeout
@@ -918,9 +922,13 @@ func _test_result_story(end_screen: Node, prefix: String) -> void:
 	_check(story.label.text == prefix + " second paragraph", "The correct result's second paragraph should be shown.")
 	root.push_input(space)
 	await create_timer(1.0).timeout
-	_check(story.complete and story.label.text == "Game finished" and not story.prompt.visible, "The result story should end on the finished screen without a Space hint.")
+	_check(story.label.text == Text.get_text(prefix + "_paragraph_3") and not story.complete, "The correct result's third paragraph should precede the finished screen.")
+	_check(story.label.get_content_height() <= story.label.size.y - 220.0, "Result paragraphs should fit above the bottom prompt.")
 	root.push_input(space)
-	_check(story.label.text == "Game finished", "Space should not leave the finished screen.")
+	await create_timer(1.0).timeout
+	_check(story.complete and story.label.text == "Fim de jogo" and not story.prompt.visible, "The result story should end on the finished screen without a Space hint.")
+	root.push_input(space)
+	_check(story.label.text == "Fim de jogo", "Space should not leave the finished screen.")
 	Text.config.set_value("text", prefix + "_paragraph_2", original)
 
 func _test_end_screens() -> void:
@@ -1001,6 +1009,13 @@ func _test_restart() -> void:
 	current_scene = scene
 	var elephant_sound := scene.get_node("ElephantSound") as AudioStreamPlayer2D
 	_check(elephant_sound.playing, "The elephant sound should play when the game first starts.")
+	var music := scene.get_node("AudioStreamPlayer2D") as AudioStreamPlayer2D
+	var music_stream := music.stream as AudioStreamMP3
+	_check(music.playing and music_stream != null and music_stream.loop, "Combat music should start with looping enabled.")
+	if music_stream != null and music_stream.get_length() > 2.0:
+		music.play(music_stream.get_length() - 0.5)
+		await create_timer(1.0).timeout
+		_check(music.playing and music.get_playback_position() < 2.0, "Combat music should restart after reaching the end.")
 	var manager := scene.get_node("CardManager") as Node2D
 	var old_state = manager.state
 	var hint := scene.get_node("HUD/RestartHint") as Label

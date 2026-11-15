@@ -1,5 +1,6 @@
 extends CanvasLayer
 
+const Text = preload("res://data/text.gd")
 const MAIN_SCENE: PackedScene = preload("res://game/main.tscn")
 
 enum IntroState { MENU, REVEALING, WAITING, TRANSITIONING }
@@ -8,9 +9,12 @@ var intro_state := IntroState.MENU
 var wind_progress := 0.0
 
 @onready var background: ColorRect = $Background
-@onready var story: Label = $Story
+@onready var story: RichTextLabel = $Story
 @onready var prompt: Label = $Prompt
 @onready var gust_audio: AudioStreamPlayer = $GustAudio
+
+func _ready() -> void:
+	Text.set_story_italics(story)
 
 func begin(button: Button) -> void:
 	if intro_state != IntroState.MENU:

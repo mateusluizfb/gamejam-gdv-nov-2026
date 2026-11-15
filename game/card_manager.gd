@@ -41,6 +41,7 @@ var foil_card: Node2D
 @onready var axe_attack_sound: AudioStreamPlayer = $AxeAttackSound
 @onready var spear_attack_sound: AudioStreamPlayer = $SpearAttackSound
 @onready var magic_entry_sound: AudioStreamPlayer = $MagicEntrySound
+@onready var trap_sound: AudioStreamPlayer = $TrapSound
 @onready var screen_effects: ScreenEffects = $"../ScreenEffects"
 @onready var end_screen: EndScreen = $"../EndScreen"
 
@@ -257,6 +258,7 @@ func _resolve_after_delay(token: int) -> void:
 	state.resolve_effect(token)
 
 func _show_trap_effect(row: int) -> void:
+	trap_sound.play()
 	screen_effects.play_impact()
 	var row_size := Vector2(board.cards[row].size() * board.cell_size.x, board.cell_size.y)
 	var row_origin := board.cell_position(Vector2i(0, row)) - board.cell_size / 2.0

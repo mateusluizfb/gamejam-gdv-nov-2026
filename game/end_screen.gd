@@ -76,6 +76,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		story.begin([
 			Text.get_text(prefix + "_paragraph_1"),
 			Text.get_text(prefix + "_paragraph_2"),
+			Text.get_text(prefix + "_paragraph_3"),
 		], Text.get_text("game_finished"))
 
 func _on_viewport_size_changed() -> void:
