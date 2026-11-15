@@ -7,6 +7,7 @@
 [ext_resource type="Script" path="res://ui/start_intro.gd" id="5_intro_script"]
 [ext_resource type="AudioStream" path="res://assets/audio/wind-blowing.mp3" id="6_wind"]
 [ext_resource type="AudioStream" path="res://assets/audio/small-wind.mp3" id="7_gust"]
+[ext_resource type="Shader" path="res://ui/menu_mist.gdshader" id="8_menu_mist"]
 
 [sub_resource type="ShaderMaterial" id="IntroMaterial"]
 resource_local_to_scene = true
@@ -17,6 +18,10 @@ resource_local_to_scene = true
 shader = ExtResource("4_intro")
 shader_parameter/transition_mode = 2
 shader_parameter/transition_progress = 0.0
+
+[sub_resource type="ShaderMaterial" id="MenuMistMaterial"]
+resource_local_to_scene = true
+shader = ExtResource("8_menu_mist")
 
 [node name="Control" type="Control" unique_id=75429410]
 layout_mode = 3
@@ -65,6 +70,19 @@ stream = ExtResource("3_nledq")
 [node name="WindAudio" type="AudioStreamPlayer" parent="."]
 stream = ExtResource("6_wind")
 autoplay = true
+
+[node name="Mist" type="CanvasLayer" parent="."]
+layer = 52
+
+[node name="Background" type="ColorRect" parent="Mist"]
+visible = false
+material = SubResource("MenuMistMaterial")
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
 
 [node name="Opening" type="CanvasLayer" parent="."]
 layer = 51

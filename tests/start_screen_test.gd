@@ -33,6 +33,8 @@ func _run() -> void:
 	var opening_background := opening.get_node("Background") as ColorRect
 	var opening_prompt := opening.get_node("Prompt") as Label
 	var opening_material := opening_background.material as ShaderMaterial
+	var mist := scene.get_node("Mist/Background") as ColorRect
+	var mist_material := mist.material as ShaderMaterial
 	var font_path := "res://assets/fonts/Macondo-Regular.ttf"
 	_check(button.get_theme_font("font").resource_path == font_path and opening_prompt.get_theme_font("font").resource_path == font_path, "Project theme should apply the main font to buttons and labels.")
 	var dynamic_label := Label.new()
@@ -43,8 +45,9 @@ func _run() -> void:
 	var menu_audio := scene.get_node("AudioStreamPlayer2D") as AudioStreamPlayer2D
 	var gust_audio := intro.get_node("GustAudio") as AudioStreamPlayer
 	_check(wind_audio.playing and (wind_audio.stream as AudioStreamMP3).loop and not menu_audio.playing, "Opening should play looping wind instead of menu music.")
-	_check(opening.visible and button.disabled and opening_prompt.text == "Aperte ESPACO para continuar", "The opening should show only the space prompt over the disabled menu.")
+	_check(opening.visible and button.disabled and opening_prompt.text == Text.get_text("menu_continue"), "The opening should show only the space prompt over the disabled menu.")
 	_check(opening_background.anchor_right == 1.0 and opening_background.anchor_bottom == 1.0 and opening_material.get_shader_parameter("transition_mode") == 2, "Opening clouds should cover the viewport and be ready to reveal the menu.")
+	_check(not mist.visible, "Mist should not appear before the opening prompt is dismissed.")
 	root.push_input(_key(KEY_ENTER))
 	root.push_input(_key(KEY_SPACE, true))
 	button.pressed.emit()
@@ -52,6 +55,8 @@ func _run() -> void:
 	_check(wind_audio.playing and not menu_audio.playing and not gust_audio.playing, "Other keys should not change the opening audio.")
 	root.push_input(_key(KEY_SPACE))
 	_check(not wind_audio.playing and menu_audio.playing, "Space should immediately switch from wind to menu music.")
+	_check(mist.visible and mist.anchor_right == 1.0 and mist.anchor_bottom == 1.0 and mist.mouse_filter == Control.MOUSE_FILTER_IGNORE, "Mist should cover the screen after Space without blocking the menu.")
+	_check(mist_material.shader == load("res://ui/menu_mist.gdshader") and not mist.is_processing_input(), "The menu should use mist without reacting to mouse input.")
 	_check(gust_audio.playing and gust_audio.stream.resource_path == "res://assets/audio/small-wind.mp3" and not (gust_audio.stream as AudioStreamMP3).loop, "Space should play the one-shot gust sound.")
 	root.push_input(_key(KEY_SPACE))
 	await create_timer(0.3).timeout
@@ -67,6 +72,7 @@ func _run() -> void:
 	button.pressed.emit()
 	button.pressed.emit()
 	_check(button.disabled and intro.visible and intro.intro_state == intro.IntroState.REVEALING, "New game should start the intro once.")
+	_check(mist.visible, "Mist should remain visible over the intro.")
 	_check(background.anchor_right == 1.0 and background.anchor_bottom == 1.0 and background.material is ShaderMaterial, "Intro shader should cover the viewport.")
 	_check(story.text == "Para finalizar o monumento seus guerreiros precisam passar pelos elefantes para buscar o marfim restante" and prompt.text == "Pressione espaço para continuar", "Intro should display the requested story and space prompt.")
 	intro._input(_key(KEY_SPACE))
@@ -84,6 +90,7 @@ func _run() -> void:
 	_check(current_scene == scene and material.get_shader_parameter("transition_mode") == 1 and material.get_shader_parameter("transition_progress") > 0.0 and material.get_shader_parameter("transition_progress") < 1.0, "A gust should cover the intro before changing scenes.")
 	await create_timer(1.0).timeout
 	_check(current_scene != null and current_scene != scene and current_scene.get_node_or_null("CardManager") != null, "Space should load the main game.")
+	_check(not is_instance_valid(mist), "The menu mist should not persist into the game.")
 	if current_scene != null and current_scene != scene:
 		_check((current_scene.get_node("ElephantSound") as AudioStreamPlayer2D).playing, "Entering the game from the menu should play the elephant sound.")
 	_check(is_instance_valid(intro) and intro.get_parent() == root and background.visible and material.get_shader_parameter("transition_mode") == 2 and material.get_shader_parameter("transition_progress") > 0.0 and material.get_shader_parameter("transition_progress") < 1.0, "Gust should sweep over the new scene as it reveals the game.")

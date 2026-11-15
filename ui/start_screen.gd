@@ -21,6 +21,7 @@ func _input(event: InputEvent) -> void:
 
 func _reveal_menu() -> void:
 	opening_state = OpeningState.REVEALING
+	$Mist/Background.show()
 	$WindAudio.stop()
 	$AudioStreamPlayer2D.play()
 	$Intro/GustAudio.play()
