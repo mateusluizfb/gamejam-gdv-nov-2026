@@ -4,9 +4,11 @@
 [ext_resource type="Script" uid="uid://do04btrux708r" path="res://cards/card.gd" id="1_rjlel"]
 
 [node name="Card" type="Node2D" unique_id=798521650]
+scale = Vector2(0.9, 0.9)
 script = ExtResource("1_rjlel")
 
 [node name="Sprite2D" type="Sprite2D" parent="." unique_id=437709349]
+texture_filter = 1
 scale = Vector2(1.25, 1.25)
 texture = ExtResource("1_kikvd")
 
@@ -44,25 +46,6 @@ theme_override_colors/font_color = Color(1, 0.94, 0.8, 1)
 theme_override_font_sizes/font_size = 8
 horizontal_alignment = 1
 
-[node name="HPBackground" type="ColorRect" parent="." unique_id=41362250]
-offset_left = -32.0
-offset_top = 24.0
-offset_right = 32.0
-offset_bottom = 52.0
-mouse_filter = 2
-color = Color(0, 0, 0, 0.9)
-
-[node name="HP" type="Label" parent="." unique_id=532024948]
-offset_left = -32.0
-offset_top = 31.0
-offset_right = 32.0
-offset_bottom = 51.0
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 15
-horizontal_alignment = 1
-
 [node name="BonusBackground" type="ColorRect" parent="." unique_id=160846055]
 visible = false
 offset_left = -32.0
@@ -83,3 +66,31 @@ theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 3
 theme_override_font_sizes/font_size = 13
 horizontal_alignment = 1
+
+[node name="HP" type="Label" parent="."]
+offset_right = 24.0
+offset_bottom = 20.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_font_sizes/font_size = 13
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Hexagon" type="Polygon2D" parent="HP"]
+show_behind_parent = true
+color = Color(0.92, 0.88, 0.78, 1)
+polygon = PackedVector2Array(1, 10, 6.5, 1, 17.5, 1, 23, 10, 17.5, 19, 6.5, 19)
+
+[node name="Attack" type="Label" parent="."]
+offset_right = 24.0
+offset_bottom = 20.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_font_sizes/font_size = 13
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Hexagon" type="Polygon2D" parent="Attack"]
+show_behind_parent = true
+color = Color(0.92, 0.88, 0.78, 1)
+polygon = PackedVector2Array(1, 10, 6.5, 1, 17.5, 1, 23, 10, 17.5, 19, 6.5, 19)

@@ -30,3 +30,13 @@ func _init(card_type: Type, card_owner: Owner, hp: int, image: String) -> void:
 
 func display_name() -> String:
 	return Text.get_text(DISPLAY_NAMES[type])
+
+func attack_damage(row: int, bonus: int = 0) -> int:
+	match type:
+		Type.AXE:
+			return (AXE_BOTTOM_DAMAGE if row == 3 else AXE_UPPER_DAMAGE) + bonus
+		Type.SPEAR:
+			return (SPEAR_UPPER_DAMAGE if row != 3 and row != -1 else SPEAR_BOTTOM_DAMAGE) + bonus
+		Type.TRAP:
+			return TRAP_DAMAGE + bonus
+	return 0

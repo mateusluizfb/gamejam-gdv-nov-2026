@@ -6,36 +6,13 @@ uniform float wind_progress : hint_range(0.0, 1.0) = 0.0;
 uniform int transition_mode : hint_range(0, 2) = 0;
 uniform float transition_progress : hint_range(0.0, 1.0) = 0.0;
 
-float noise(vec2 p) {
-	vec2 cell = floor(p);
-	vec2 f = fract(p);
-	f = f * f * (3.0 - 2.0 * f);
-	vec4 seeds = vec4(
-		dot(cell, vec2(127.1, 311.7)),
-		dot(cell + vec2(1.0, 0.0), vec2(127.1, 311.7)),
-		dot(cell + vec2(0.0, 1.0), vec2(127.1, 311.7)),
-		dot(cell + vec2(1.0), vec2(127.1, 311.7))
-	);
-	vec4 values = fract(sin(seeds) * 43758.5453);
-	return mix(mix(values.x, values.y, f.x), mix(values.z, values.w, f.x), f.y);
-}
-
-float clouds(vec2 p) {
-	float value = 0.0;
-	float weight = 0.5;
-	for (int i = 0; i < 4; i++) {
-		value += noise(p) * weight;
-		p = p * 2.03 + vec2(5.2, 1.3);
-		weight *= 0.5;
-	}
-	return value;
-}
+#include "res://game/mist_noise.gdshaderinc"
 
 void fragment() {
 	vec2 centered = UV - vec2(0.5);
 	vec2 flow = UV * vec2(3.2, 4.6) - vec2(TIME * 0.35, TIME * 0.09);
-	float turbulence = clouds(flow);
-	float curls = clouds(flow * 1.8 + vec2(turbulence * 2.0, -turbulence));
+	float turbulence = mist_wisps(flow, TIME);
+	float curls = mist_fbm(flow * 1.8 + vec2(turbulence * 2.0, -turbulence));
 	float progress = transition_mode == 0 ? wind_progress : transition_progress;
 	float front = mix(-0.65, 1.65, progress);
 	float wind_x = UV.x + (turbulence - 0.45) * 0.3 + (curls - 0.45) * 0.12;

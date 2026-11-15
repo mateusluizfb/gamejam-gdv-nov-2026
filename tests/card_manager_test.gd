@@ -47,13 +47,13 @@ func _test_loader() -> void:
 		["wrong side", valid.replace("elephant,enemy,board,0,0", "elephant,enemy,board,2,0")],
 		["wrong zone", valid.replace("axe,player,hand,,,", "axe,player,board,2,0,")],
 		["inconsistent player hp", valid + "axe,player,hand,,,5,res://assets/x1/action_cards/attack/cleave.png,,\n"],
-		["inconsistent image", valid.replace("elephant,enemy,board,0,0,10,res://assets/x1/action_cards/defense/block.png", "elephant,enemy,board,0,0,10,res://assets/x1/action_cards/attack/cleave.png")],
+		["inconsistent image", valid.replace("elephant,enemy,board,0,0,10,res://assets/cards/elefante.png", "elephant,enemy,board,0,0,10,res://assets/x1/action_cards/attack/cleave.png")],
 		["invalid hp", valid.replace("elephant,enemy,board,0,0,10", "elephant,enemy,board,0,0,0")],
-		["bad image", valid.replace("res://assets/x1/action_cards/defense/block.png", "res://missing.png")],
+		["bad image", valid.replace("res://assets/cards/elefante.png", "res://missing.png")],
 		["dimensions", valid.replace(",,,,,,,4,4", ",,,,,,,5,4")],
 		["missing board configuration", valid.replace(",,,,,,,4,4\n", "")],
 		["duplicate board configuration", valid + ",,,,,,,4,4\n"],
-		["dimensions on card", valid.replace("block.png,,", "block.png,4,4")],
+		["dimensions on card", valid.replace("elefante.png,,", "elefante.png,4,4")],
 		["malformed quote", valid.replace("elephant,enemy,board,0,0", "\"elephant,enemy,board,0,0")]
 	]
 	var test_path := "user://starting-cards-test-%d-%d.csv" % [OS.get_process_id(), Time.get_ticks_usec()]

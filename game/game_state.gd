@@ -85,15 +85,15 @@ func play_card(card: CardData, cell: Vector2i) -> bool:
 	changed.emit()
 	match card.type:
 		CardData.Type.AXE:
-			pending_damage = (CardData.AXE_BOTTOM_DAMAGE if cell.y == 3 else CardData.AXE_UPPER_DAMAGE) + damage_bonus
+			pending_damage = card.attack_damage(cell.y, damage_bonus)
 			phase = Phase.TARGETING
 			feedback.emit(Text.get_text("feedback_target_axe") % pending_damage)
 		CardData.Type.SPEAR:
-			pending_damage = (CardData.SPEAR_BOTTOM_DAMAGE if cell.y == 3 else CardData.SPEAR_UPPER_DAMAGE) + damage_bonus
+			pending_damage = card.attack_damage(cell.y, damage_bonus)
 			phase = Phase.TARGETING
 			feedback.emit(Text.get_text("feedback_target_spear") % pending_damage)
 		CardData.Type.TRAP:
-			pending_damage = CardData.TRAP_DAMAGE + damage_bonus
+			pending_damage = card.attack_damage(cell.y, damage_bonus)
 			_start_effect()
 		CardData.Type.MAGIC:
 			_start_effect()

@@ -57,7 +57,7 @@ func _ready() -> void:
 	if result.has("error"):
 		_fail_startup(result["error"])
 		return
-	var cell_size := _get_cell_size()
+	var cell_size := _get_cell_size(result["records"])
 	if cell_size == Vector2.ZERO:
 		_fail_startup(Text.get_text("startup_no_sprite"))
 		return
@@ -113,13 +113,18 @@ func _fail_startup(message: String) -> void:
 		error_label.text = Text.get_text("startup_error") % message
 		error_label.show()
 
-func _get_cell_size() -> Vector2:
-	var sample_card := CARD_SCENE.instantiate()
+func _get_cell_size(records: Array) -> Vector2:
+	var sample_card := CARD_SCENE.instantiate() as Node2D
 	var sprite := sample_card.get_node_or_null("Sprite2D") as Sprite2D
 	if sprite == null or sprite.get_rect().size.x <= 0 or sprite.get_rect().size.y <= 0:
 		sample_card.free()
 		return Vector2.ZERO
-	var size := sprite.get_rect().size * sprite.scale.abs() + Vector2(Board.COLUMN_GAP, Board.ROW_GAP)
+	var max_texture_size := sprite.get_rect().size
+	for record in records:
+		var card: CardData = record["card"]
+		var texture := load(card.image_path) as Texture2D
+		max_texture_size = max_texture_size.max(texture.get_size())
+	var size := max_texture_size * sprite.scale.abs() * sample_card.scale.abs() + Vector2(Board.COLUMN_GAP, Board.ROW_GAP)
 	sample_card.free()
 	return size
 
@@ -140,8 +145,9 @@ func _refresh_state() -> void:
 	for card in card_views:
 		var view = card_views[card]
 		view.damage_bonus = state.damage_bonus if state.player.hand.has(card) else 0
+		view.damage_bonus = _card_damage_bonus(view)
 		view.refresh()
-		CardParticles.set_magic_buff(view, _card_damage_bonus(view) > 0)
+		CardParticles.set_magic_buff(view, view.damage_bonus > 0)
 	_refresh_targeting()
 	if is_instance_valid(dragged_card):
 		_update_drop_highlight()
