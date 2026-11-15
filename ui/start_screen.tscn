@@ -3,20 +3,32 @@
 [ext_resource type="Script" uid="uid://b5y0gkdbdwq7o" path="res://ui/start_screen.gd" id="1_fyqef"]
 [ext_resource type="Texture2D" uid="uid://bvjhyrntwphfm" path="res://assets/map.png" id="2_50anp"]
 [ext_resource type="AudioStream" uid="uid://cj2co76j18edx" path="res://assets/audio/menu-theme.mp3" id="3_nledq"]
-[ext_resource type="Shader" path="res://ui/start_intro.gdshader" id="4_intro"]
-[ext_resource type="Script" path="res://ui/start_intro.gd" id="5_intro_script"]
-[ext_resource type="AudioStream" path="res://assets/audio/wind-blowing.mp3" id="6_wind"]
-[ext_resource type="AudioStream" path="res://assets/audio/small-wind.mp3" id="7_gust"]
+[ext_resource type="Shader" uid="uid://bhdymi083gqyn" path="res://ui/start_intro.gdshader" id="4_intro"]
+[ext_resource type="Script" uid="uid://dvmeyq0th2cia" path="res://ui/start_intro.gd" id="5_intro_script"]
+[ext_resource type="AudioStream" uid="uid://ud7twmjxn37a" path="res://assets/audio/wind-blowing.mp3" id="6_wind"]
+[ext_resource type="AudioStream" uid="uid://catknpw0p3vvh" path="res://assets/audio/small-wind.mp3" id="7_gust"]
+[ext_resource type="Texture2D" uid="uid://dltmx2066psic" path="res://assets/elefantes.png" id="8_elephants"]
+[ext_resource type="Shader" uid="uid://qx7tp2p5j8vf" path="res://ui/elephant_button.gdshader" id="9_elephant_shader"]
 [ext_resource type="Shader" path="res://ui/menu_mist.gdshader" id="8_menu_mist"]
 
-[sub_resource type="ShaderMaterial" id="IntroMaterial"]
+[sub_resource type="ShaderMaterial" id="ElephantButtonMaterial"]
 resource_local_to_scene = true
-shader = ExtResource("4_intro")
+shader = ExtResource("9_elephant_shader")
+shader_parameter/button_center = Vector2(0, 0)
+shader_parameter/highlight = 0.0
 
 [sub_resource type="ShaderMaterial" id="OpeningMaterial"]
 resource_local_to_scene = true
 shader = ExtResource("4_intro")
+shader_parameter/wind_progress = 0.0
 shader_parameter/transition_mode = 2
+shader_parameter/transition_progress = 0.0
+
+[sub_resource type="ShaderMaterial" id="IntroMaterial"]
+resource_local_to_scene = true
+shader = ExtResource("4_intro")
+shader_parameter/wind_progress = 0.0
+shader_parameter/transition_mode = 0
 shader_parameter/transition_progress = 0.0
 
 [sub_resource type="ShaderMaterial" id="MenuMistMaterial"]
@@ -49,25 +61,29 @@ offset_right = 1279.8
 offset_bottom = 720.16003
 texture = ExtResource("2_50anp")
 
-[node name="Button" type="Button" parent="." unique_id=2083182781]
+[node name="Button" type="TextureButton" parent="." unique_id=2083182781]
+material = SubResource("ElephantButtonMaterial")
 layout_mode = 1
 anchors_preset = -1
 anchor_left = 0.67600006
 anchor_top = 0.179
 anchor_right = 0.67600006
 anchor_bottom = 0.179
-offset_left = -43.28009
-offset_top = -19.880005
-offset_right = 42.71991
-offset_bottom = 11.119995
+offset_left = -130.28009
+offset_top = -216.88
+offset_right = 141.64545
+offset_bottom = -13.880005
 grow_horizontal = 2
 grow_vertical = 2
 disabled = true
+texture_normal = ExtResource("8_elephants")
+ignore_texture_size = true
+stretch_mode = 5
 
 [node name="AudioStreamPlayer2D" type="AudioStreamPlayer2D" parent="." unique_id=357792844]
 stream = ExtResource("3_nledq")
 
-[node name="WindAudio" type="AudioStreamPlayer" parent="."]
+[node name="WindAudio" type="AudioStreamPlayer" parent="." unique_id=1906915475]
 stream = ExtResource("6_wind")
 autoplay = true
 
@@ -84,10 +100,10 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="Opening" type="CanvasLayer" parent="."]
+[node name="Opening" type="CanvasLayer" parent="." unique_id=1487861026]
 layer = 51
 
-[node name="Background" type="ColorRect" parent="Opening"]
+[node name="Background" type="ColorRect" parent="Opening" unique_id=1464493529]
 material = SubResource("OpeningMaterial")
 anchors_preset = 15
 anchor_right = 1.0
@@ -96,13 +112,12 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="Prompt" type="Label" parent="Opening"]
+[node name="Prompt" type="Label" parent="Opening" unique_id=465473791]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-mouse_filter = 2
 theme_override_colors/font_color = Color(0, 0, 0, 1)
 theme_override_colors/font_outline_color = Color(1, 1, 1, 1)
 theme_override_constants/outline_size = 2
@@ -110,15 +125,15 @@ theme_override_font_sizes/font_size = 34
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="Intro" type="CanvasLayer" parent="."]
-visible = false
+[node name="Intro" type="CanvasLayer" parent="." unique_id=728940156]
 layer = 50
+visible = false
 script = ExtResource("5_intro_script")
 
-[node name="GustAudio" type="AudioStreamPlayer" parent="Intro"]
+[node name="GustAudio" type="AudioStreamPlayer" parent="Intro" unique_id=2056921993]
 stream = ExtResource("7_gust")
 
-[node name="Background" type="ColorRect" parent="Intro"]
+[node name="Background" type="ColorRect" parent="Intro" unique_id=1029889724]
 modulate = Color(1, 1, 1, 0)
 material = SubResource("IntroMaterial")
 anchors_preset = 15
@@ -128,7 +143,7 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="Story" type="RichTextLabel" parent="Intro"]
+[node name="Story" type="RichTextLabel" parent="Intro" unique_id=2035426868]
 modulate = Color(1, 1, 1, 0)
 anchors_preset = -1
 anchor_left = 0.1
@@ -149,7 +164,7 @@ horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 2
 
-[node name="Prompt" type="Label" parent="Intro"]
+[node name="Prompt" type="Label" parent="Intro" unique_id=1476968065]
 modulate = Color(1, 1, 1, 0)
 anchors_preset = -1
 anchor_top = 0.68
@@ -157,7 +172,6 @@ anchor_right = 1.0
 anchor_bottom = 0.76
 grow_horizontal = 2
 grow_vertical = 2
-mouse_filter = 2
 theme_override_colors/font_color = Color(0, 0, 0, 1)
 theme_override_colors/font_outline_color = Color(1, 1, 1, 1)
 theme_override_constants/outline_size = 2

@@ -21,14 +21,12 @@ func _key(keycode: Key, echo: bool = false) -> InputEventKey:
 
 func _run() -> void:
 	var scene: Node = load("res://ui/start_screen.tscn").instantiate()
-	var original_button := Text.get_text("menu_new_game")
-	Text.config.set_value("text", "menu_new_game", "Menu editado")
 	root.add_child(scene)
 	current_scene = scene
 	var intro = scene.get_node("Intro")
-	var button := scene.get_node("Button") as Button
-	_check(button.text == "Menu editado", "Menu text should come from the editable text file.")
-	Text.config.set_value("text", "menu_new_game", original_button)
+	var button := scene.get_node("Button") as TextureButton
+	_check(button.texture_normal == load("res://assets/elefantes.png"), "The menu button should show the elephants.")
+	_check((button.material as ShaderMaterial).shader == load("res://ui/elephant_button.gdshader"), "The elephant button should use the glow shader.")
 	var opening := scene.get_node("Opening") as CanvasLayer
 	var opening_background := opening.get_node("Background") as ColorRect
 	var opening_prompt := opening.get_node("Prompt") as Label
@@ -36,7 +34,7 @@ func _run() -> void:
 	var mist := scene.get_node("Mist/Background") as ColorRect
 	var mist_material := mist.material as ShaderMaterial
 	var font_path := "res://assets/fonts/Macondo-Regular.ttf"
-	_check(button.get_theme_font("font").resource_path == font_path and opening_prompt.get_theme_font("font").resource_path == font_path, "Project theme should apply the main font to buttons and labels.")
+	_check(opening_prompt.get_theme_font("font").resource_path == font_path, "Project theme should apply the main font to the opening prompt.")
 	var dynamic_label := Label.new()
 	scene.add_child(dynamic_label)
 	_check(dynamic_label.get_theme_font("font").resource_path == font_path, "Dynamically created controls should use the main font.")

@@ -16,7 +16,7 @@ var wind_progress := 0.0
 func _ready() -> void:
 	Text.set_story_italics(story)
 
-func begin(button: Button) -> void:
+func begin(button: BaseButton) -> void:
 	if intro_state != IntroState.MENU:
 		return
 	intro_state = IntroState.REVEALING
