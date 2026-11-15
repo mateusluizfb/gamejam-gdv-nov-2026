@@ -12,7 +12,7 @@ var wind_progress := 0.0
 @onready var prompt: Label = $Prompt
 @onready var gust_audio: AudioStreamPlayer = $GustAudio
 
-func begin(button: Button) -> void:
+func begin(button: BaseButton) -> void:
 	if intro_state != IntroState.MENU:
 		return
 	intro_state = IntroState.REVEALING
