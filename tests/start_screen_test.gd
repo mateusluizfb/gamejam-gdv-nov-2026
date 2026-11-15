@@ -19,14 +19,29 @@ func _key(keycode: Key, echo: bool = false) -> InputEventKey:
 	event.echo = echo
 	return event
 
+func _move_mouse(position: Vector2) -> void:
+	var event := InputEventMouseMotion.new()
+	event.position = position
+	event.global_position = position
+	root.push_input(event)
+
 func _run() -> void:
+	root.size = Vector2i(1280, 720)
 	var scene: Node = load("res://ui/start_screen.tscn").instantiate()
 	root.add_child(scene)
 	current_scene = scene
 	var intro = scene.get_node("Intro")
 	var button := scene.get_node("Button") as TextureButton
+	var aura := button.get_node("Aura") as ColorRect
+	var aura_material := aura.material as ShaderMaterial
 	_check(button.texture_normal == load("res://assets/elefantes.png"), "The menu button should show the elephants.")
 	_check((button.material as ShaderMaterial).shader == load("res://ui/elephant_button.gdshader"), "The elephant button should use the glow shader.")
+	_check(button.mouse_default_cursor_shape == Control.CURSOR_POINTING_HAND, "The menu button should use the pointing hand cursor.")
+	_check(aura_material.shader == load("res://cards/continuous_aura.gdshader") and aura.mouse_filter == Control.MOUSE_FILTER_IGNORE and aura.show_behind_parent, "The button aura should use the card aura shader without blocking input.")
+	_check(aura_material.get_shader_parameter("shape_size") == button.size and aura_material.get_shader_parameter("aura_size") == aura.size, "The aura shader should match the button and aura sizes.")
+	var aura_padding := (aura.size - button.size) * 0.5
+	var shortest_side := minf(button.size.x, button.size.y)
+	_check(aura_padding.x * shortest_side / button.size.x >= 26.99 and aura_padding.y * shortest_side / button.size.y >= 26.99, "The elliptical aura should have enough padding to fade on both axes.")
 	var opening := scene.get_node("Opening") as CanvasLayer
 	var opening_background := opening.get_node("Background") as ColorRect
 	var opening_prompt := opening.get_node("Prompt") as Label
@@ -85,6 +100,16 @@ func _run() -> void:
 	_check(scene.opening_state == scene.OpeningState.REVEALING and button.disabled and opening_material.get_shader_parameter("transition_progress") > 0.0 and opening_material.get_shader_parameter("transition_progress") < 1.0, "Wind should gradually reveal the menu without accepting input.")
 	await create_timer(1.0).timeout
 	_check(scene.opening_state == scene.OpeningState.FINISHED and not opening.visible and not button.disabled, "The menu should become usable after the clouds clear.")
+	_move_mouse(Vector2.ZERO)
+	await create_timer(0.3).timeout
+	var idle_aura_alpha := aura.modulate.a
+	_check(button.has_focus() and idle_aura_alpha > 0.0, "The enabled, focused button should have a visible idle aura.")
+	_move_mouse(button.get_global_rect().get_center())
+	await create_timer(0.3).timeout
+	_check(button.is_hovered() and aura.modulate.a > idle_aura_alpha, "Hovering should make the aura denser even when the button already has focus.")
+	_move_mouse(Vector2.ZERO)
+	await create_timer(0.3).timeout
+	_check(not button.is_hovered() and is_equal_approx(aura.modulate.a, idle_aura_alpha), "The aura should return to idle after the pointer leaves.")
 	var background := intro.get_node("Background") as ColorRect
 	var story := intro.get_node("Story") as RichTextLabel
 	var prompt := intro.get_node("Prompt") as Label
@@ -94,6 +119,8 @@ func _run() -> void:
 	button.pressed.emit()
 	button.pressed.emit()
 	_check(button.disabled and intro.visible and intro.intro_state == intro.IntroState.REVEALING, "New game should start the intro once.")
+	await create_timer(0.2).timeout
+	_check(is_zero_approx(aura.modulate.a), "The aura should disappear when the button is disabled for the intro.")
 	_check(mist.visible, "Mist should remain visible over the intro.")
 	_check(background.anchor_right == 1.0 and background.anchor_bottom == 1.0 and background.material is ShaderMaterial, "Intro shader should cover the viewport.")
 	_check(story.text == Text.get_text("intro_story") and story.text.contains("novo [i]soba[/i]") and story.bbcode_enabled and story.get_theme_font("italics_font") is FontVariation and prompt.text == "Pressione espaço para continuar", "Intro should display the new story with italicized soba and the space prompt.")

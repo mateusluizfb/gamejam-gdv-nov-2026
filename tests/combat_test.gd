@@ -575,6 +575,8 @@ func _test_particles() -> void:
 	if drag != null:
 		var sprite := axe.get_node("Sprite2D") as Sprite2D
 		_check(drag.material.shader == load("res://cards/continuous_aura.gdshader") and drag.size.x > sprite.get_rect().size.x * sprite.scale.x, "Drag aura should surround the card.")
+		var padding := (drag.size - sprite.get_rect().size * sprite.scale.abs()) * 0.5
+		_check(padding.x >= 27.0 and padding.y >= 27.0, "Card aura padding should contain the full glow and shimmer.")
 		_motion(manager, manager.get_global_transform_with_canvas() * board.cell_position(Vector2i(0, 2)))
 		_check(drag.get_parent() == axe and drag.visible, "Drag aura should follow the moving card.")
 	_escape(manager)

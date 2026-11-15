@@ -7,7 +7,12 @@ const DAMAGE_COLOR := Color(1.0, 0.28, 0.12, 0.8)
 const TRAP_COLOR := Color(0.75, 0.3, 1.0, 0.8)
 const MAGIC_BUFF_COLOR := Color(1.0, 0.12, 0.12, 0.9)
 const TARGET_COLOR := Color(0.7, 0.2, 1.0, 0.95)
-const PADDING := 22.0
+const PADDING := 27.0
+
+static func aura_padding(shape_size: Vector2, round_shape: bool) -> Vector2:
+	if round_shape:
+		return shape_size / maxf(minf(shape_size.x, shape_size.y), 1.0) * PADDING
+	return Vector2.ONE * PADDING
 
 static func start_drag(card: Node2D) -> void:
 	var aura := card.get_node_or_null("DragAura") as ColorRect
@@ -56,8 +61,9 @@ static func _card_aura(card: Node2D, node_name: String, color: Color) -> ColorRe
 
 static func _new_aura(rect: Rect2, color: Color, round_shape: bool) -> ColorRect:
 	var aura := ColorRect.new()
-	aura.position = rect.position - Vector2.ONE * PADDING
-	aura.size = rect.size + Vector2.ONE * PADDING * 2.0
+	var padding := aura_padding(rect.size, round_shape)
+	aura.position = rect.position - padding
+	aura.size = rect.size + padding * 2.0
 	aura.pivot_offset = aura.size / 2.0
 	aura.color = color
 	aura.mouse_filter = Control.MOUSE_FILTER_IGNORE

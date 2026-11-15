@@ -10,6 +10,7 @@
 [ext_resource type="Texture2D" uid="uid://dltmx2066psic" path="res://assets/elefantes.png" id="8_elephants"]
 [ext_resource type="Shader" uid="uid://qx7tp2p5j8vf" path="res://ui/elephant_button.gdshader" id="9_elephant_shader"]
 [ext_resource type="Shader" path="res://ui/menu_mist.gdshader" id="8_menu_mist"]
+[ext_resource type="Shader" path="res://cards/continuous_aura.gdshader" id="10_aura"]
 
 [sub_resource type="ShaderMaterial" id="ElephantButtonMaterial"]
 resource_local_to_scene = true
@@ -34,6 +35,11 @@ shader_parameter/transition_progress = 0.0
 [sub_resource type="ShaderMaterial" id="MenuMistMaterial"]
 resource_local_to_scene = true
 shader = ExtResource("8_menu_mist")
+
+[sub_resource type="ShaderMaterial" id="ButtonAuraMaterial"]
+resource_local_to_scene = true
+shader = ExtResource("10_aura")
+shader_parameter/round_shape = true
 
 [node name="Control" type="Control" unique_id=75429410]
 layout_mode = 3
@@ -75,10 +81,28 @@ offset_right = 141.64545
 offset_bottom = -13.880005
 grow_horizontal = 2
 grow_vertical = 2
+mouse_default_cursor_shape = 2
 disabled = true
 texture_normal = ExtResource("8_elephants")
 ignore_texture_size = true
 stretch_mode = 5
+
+[node name="Aura" type="ColorRect" parent="Button"]
+show_behind_parent = true
+material = SubResource("ButtonAuraMaterial")
+modulate = Color(1, 1, 1, 0)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -22.0
+offset_top = -22.0
+offset_right = 22.0
+offset_bottom = 22.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(1, 0.78, 0.32, 1)
 
 [node name="AudioStreamPlayer2D" type="AudioStreamPlayer2D" parent="." unique_id=357792844]
 stream = ExtResource("3_nledq")

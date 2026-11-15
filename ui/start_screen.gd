@@ -2,14 +2,18 @@ extends Control
 
 const Text = preload("res://data/text.gd")
 const StoryScreen = preload("res://ui/story_screen.gd")
+const CardParticles = preload("res://game/card_particles.gd")
 
 enum OpeningState { WAITING, STORY, REVEALING, FINISHED }
 
 var opening_state := OpeningState.WAITING
 var button_highlight_tween: Tween
+var button_aura_tween: Tween
 
 @onready var start_button: TextureButton = $Button
 @onready var button_material: ShaderMaterial = start_button.material
+@onready var button_aura: ColorRect = $Button/Aura
+@onready var aura_material: ShaderMaterial = button_aura.material
 
 func _ready() -> void:
 	start_button.resized.connect(_update_button_center)
@@ -65,13 +69,25 @@ func _enable_menu() -> void:
 
 func _update_button_center() -> void:
 	button_material.set_shader_parameter("button_center", start_button.size * 0.5)
+	var padding := CardParticles.aura_padding(start_button.size, true)
+	button_aura.offset_left = -padding.x
+	button_aura.offset_top = -padding.y
+	button_aura.offset_right = padding.x
+	button_aura.offset_bottom = padding.y
+	aura_material.set_shader_parameter("shape_size", start_button.size)
+	aura_material.set_shader_parameter("aura_size", button_aura.size)
 
 func _update_button_highlight() -> void:
 	var highlighted := not start_button.disabled and (start_button.is_hovered() or start_button.has_focus())
+	var aura_opacity := 0.0 if start_button.disabled else (0.95 if start_button.is_hovered() else 0.35)
 	if button_highlight_tween:
 		button_highlight_tween.kill()
 	button_highlight_tween = create_tween().set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 	button_highlight_tween.tween_property(button_material, "shader_parameter/highlight", 1.0 if highlighted else 0.0, 0.18)
+	if button_aura_tween:
+		button_aura_tween.kill()
+	button_aura_tween = create_tween().set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	button_aura_tween.tween_property(button_aura, "modulate:a", aura_opacity, 0.18)
 
 func _set_opening_progress(value: float) -> void:
 	var material := $Opening/Background.material as ShaderMaterial

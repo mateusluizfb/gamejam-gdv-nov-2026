@@ -41,7 +41,8 @@ void fragment() {
 	float wind_x = UV.x + (turbulence - 0.45) * 0.3 + (curls - 0.45) * 0.12;
 	float coverage = 1.0 - smoothstep(front - 0.26, front + 0.18, wind_x);
 	float gust_envelope = smoothstep(0.0, 0.08, progress) * (1.0 - smoothstep(0.84, 1.0, progress));
-	float gust = exp(-pow((wind_x - front) * 3.8, 2.0)) * gust_envelope;
+	float gust_distance = (wind_x - front) * 3.8;
+	float gust = exp(-gust_distance * gust_distance) * gust_envelope;
 	vec2 displacement = vec2(turbulence - 0.45, curls - 0.45);
 	displacement += vec2(sin(UV.y * 12.0 - TIME * 2.0), cos(UV.x * 11.0 + TIME)) * 0.2;
 	vec2 uv = clamp(SCREEN_UV + displacement * (gust * 0.045 + coverage * 0.003), vec2(0.0), vec2(1.0));
