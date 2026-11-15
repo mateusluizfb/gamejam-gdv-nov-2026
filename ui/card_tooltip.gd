@@ -28,7 +28,7 @@ var preview_disappearing := false
 
 func _ready() -> void:
 	preview = CARD_SCENE.instantiate() as CardView
-	preview.scale = Vector2.ONE * PREVIEW_SCALE
+	preview.scale *= PREVIEW_SCALE
 	preview.hide()
 	for child in preview.get_children():
 		if child is Control:
@@ -113,7 +113,7 @@ func _position_tooltip() -> void:
 	var board = manager.board
 	var columns: int = board.cards[0].size()
 	var board_top_right: Vector2 = board.cell_position(Vector2i(columns - 1, 0)) + Vector2(board.cell_size.x / 2.0, -board.cell_size.y / 2.0)
-	var preview_size := preview.sprite.get_rect().size * preview.sprite.scale.abs() * PREVIEW_SCALE
+	var preview_size := preview.sprite.get_rect().size * preview.sprite.scale.abs() * preview.scale.abs()
 	var desired: Vector2 = manager.get_global_transform_with_canvas() * board_top_right + preview_offset
 	var viewport := get_viewport_rect()
 	var top_left := Vector2(

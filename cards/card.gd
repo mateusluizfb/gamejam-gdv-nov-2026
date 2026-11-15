@@ -7,6 +7,7 @@ const Text = preload("res://data/text.gd")
 const FOIL_SHADER = preload("res://cards/card.gdshader")
 const BONUS_COLOR := Color(0.13, 0.21, 0.45, 0.95)
 const PENALTY_COLOR := Color(0.5, 0.12, 0.1, 0.95)
+const ELEPHANT_DISPLAY_STRENGTH := 20
 
 var data: CardData
 var damage_bonus := 0
@@ -15,6 +16,7 @@ var movement_target := Vector2.ZERO
 
 @onready var sprite: Sprite2D = $Sprite2D
 @onready var hp_label: Label = $HP
+@onready var attack_label: Label = $Attack
 @onready var bonus_label: Label = $Bonus
 @onready var bonus_background: ColorRect = $BonusBackground
 @onready var name_label: Label = $CardName
@@ -58,6 +60,7 @@ func stop_moving() -> void:
 
 func refresh() -> void:
 	if is_node_ready() and data != null:
+		_refresh_stats()
 		name_label.text = data.display_name()
 		match data.type:
 			CardData.Type.ELEPHANT:
@@ -68,7 +71,6 @@ func refresh() -> void:
 				category_label.text = Text.get_text("category_trap")
 			_:
 				category_label.text = Text.get_text("category_attack")
-		hp_label.text = Text.get_text("card_hp") % data.current_hp
 		var penalty := _row_penalty()
 		bonus_label.visible = damage_bonus > 0 or penalty > 0
 		bonus_background.visible = bonus_label.visible
@@ -79,6 +81,23 @@ func refresh() -> void:
 		while font_size > 1 and font.get_string_size(bonus_label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x > bonus_background.size.x:
 			font_size -= 1
 		bonus_label.add_theme_font_size_override("font_size", font_size)
+
+func _refresh_stats() -> void:
+	var has_printed_hexagons := data.image_path == "res://assets/cards/elefante.png"
+	$NameBackground.visible = not has_printed_hexagons
+	$CategoryBackground.visible = not has_printed_hexagons
+	name_label.visible = not has_printed_hexagons
+	category_label.visible = not has_printed_hexagons
+	$HP/Hexagon.visible = not has_printed_hexagons
+	$Attack/Hexagon.visible = not has_printed_hexagons
+	var half_size := sprite.get_rect().size * sprite.scale.abs() * 0.5
+	var badge_x := half_size.x - 16.0
+	hp_label.position = Vector2(badge_x, -half_size.y + 12.5) - hp_label.size * 0.5
+	attack_label.position = Vector2(badge_x, half_size.y - 13.5) - attack_label.size * 0.5
+	hp_label.text = str(data.current_hp)
+	var row: int = data.board_position.y if data.board_position != null else -1
+	var strength := ELEPHANT_DISPLAY_STRENGTH if data.type == CardData.Type.ELEPHANT else data.attack_damage(row, damage_bonus)
+	attack_label.text = str(strength)
 
 func _row_penalty() -> int:
 	if data.board_position == null:

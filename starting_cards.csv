@@ -1,8 +1,8 @@
 type,owner,zone,row,column,base_hp,image_path,board_rows,board_columns
 ,,,,,,,4,4
-elephant,enemy,board,0,0,10,res://assets/x1/action_cards/defense/block.png,,
-elephant,enemy,board,0,1,10,res://assets/x1/action_cards/defense/block.png,,
-elephant,enemy,board,1,1,13,res://assets/x1/action_cards/defense/block.png,,
+elephant,enemy,board,0,0,10,res://assets/cards/elefante.png,,
+elephant,enemy,board,0,1,10,res://assets/cards/elefante.png,,
+elephant,enemy,board,1,1,13,res://assets/cards/elefante.png,,
 axe,player,hand,,,4,res://assets/x1/action_cards/attack/cleave.png,,
 spear,player,hand,,,3,res://assets/x1/action_cards/attack/strike.png,,
 magic,player,hand,,,2,res://assets/x1/action_cards/magic/fireball.png,,

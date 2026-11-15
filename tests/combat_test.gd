@@ -341,11 +341,11 @@ func _test_card_hover_and_foil() -> void:
 	_check(material.get_shader_parameter("cursor_uv").is_equal_approx(Vector2(0.7, 0.3)), "Moving over a card should update its foil position.")
 	_motion(manager, second.get_global_transform_with_canvas() * Vector2.ZERO)
 	_check(first.scale.is_equal_approx(Vector2(0.8, 1.1)) and first.z_index == 3 and is_zero_approx(material.get_shader_parameter("foil_strength")), "Switching board cards should restore the first card and disable its foil.")
-	_check(second.scale.is_equal_approx(Vector2.ONE * 1.25), "The next board card should enlarge.")
+	_check(second.scale.is_equal_approx(Vector2.ONE * 0.9 * 1.25), "The next board card should enlarge.")
 	var hand_card: Node2D = manager.hand_layout.cards[0]
 	_motion(manager, hand_card.get_global_transform_with_canvas() * Vector2.ZERO)
 	var hand_material := hand_card.get_node("Sprite2D").material as ShaderMaterial
-	_check(second.scale.is_equal_approx(Vector2.ONE) and hand_material.get_shader_parameter("foil_strength") == 1.0, "Hand cards should receive foil while preserving their existing hover behavior.")
+	_check(second.scale.is_equal_approx(Vector2.ONE * 0.9) and hand_material.get_shader_parameter("foil_strength") == 1.0, "Hand cards should receive foil while preserving their existing hover behavior.")
 	var old_uv: Vector2 = hand_material.get_shader_parameter("cursor_uv")
 	hand_card._set_movement_position(hand_card.position + Vector2(0, 5))
 	_check(not hand_material.get_shader_parameter("cursor_uv").is_equal_approx(old_uv), "Foil should track a stationary cursor as the hovered card moves.")
@@ -359,9 +359,9 @@ func _test_card_hover_and_foil() -> void:
 	hand_card.stop_moving()
 	hand_card.position = manager.board.cell_position(Vector2i(0, 2))
 	_motion(manager, hand_card.get_global_transform_with_canvas() * Vector2.ZERO)
-	_check(hand_card.scale.is_equal_approx(Vector2.ONE * 1.25) and hand_material.get_shader_parameter("foil_strength") == 1.0, "A played card should enlarge and show foil on the board, including while targeting.")
+	_check(hand_card.scale.is_equal_approx(Vector2.ONE * 0.9 * 1.25) and hand_material.get_shader_parameter("foil_strength") == 1.0, "A played card should enlarge and show foil on the board, including while targeting.")
 	manager.state.cancel_play()
-	_check(hand_card.scale.is_equal_approx(Vector2.ONE) and is_zero_approx(hand_material.get_shader_parameter("foil_strength")), "Returning a hovered board card to the hand should restore its transform and foil.")
+	_check(hand_card.scale.is_equal_approx(Vector2.ONE * 0.9) and is_zero_approx(hand_material.get_shader_parameter("foil_strength")), "Returning a hovered board card to the hand should restore its transform and foil.")
 	_motion(manager, first.get_global_transform_with_canvas() * Vector2.ZERO)
 	manager.state.set_card_hp(first.data, 0)
 	_check(manager.hovered_board_card == null and manager.foil_card == null, "Removing a hovered card should clear hover state.")
@@ -706,7 +706,7 @@ func _test_card_movement() -> void:
 	_check(axe.global_position.is_equal_approx(interrupted), "Canceling a moving card should return it from its current position.")
 	await create_timer(0.35).timeout
 	_check(manager.to_local(axe.global_position).is_equal_approx(manager.hand_layout.card_position(0)), "Canceled card should reach its hand position with transformed parents.")
-	_check(axe.scale.is_equal_approx(Vector2.ONE), "Returning a card should restore its original hand scale.")
+	_check(axe.scale.is_equal_approx(Vector2.ONE * 0.9), "Returning a card should restore its original hand scale.")
 	var spear = manager.hand_layout.cards[1]
 	var enemy: CardData = state.board[1][1]
 	var enemy_view: Node2D = manager.card_views[enemy]
@@ -1194,6 +1194,7 @@ func _test_tooltips() -> void:
 	Text.config.set_value("text", "tooltip_bonus", original_bonus)
 	tooltip.refresh()
 	_check(preview.damage_bonus == 2 and preview.bonus_label.text == spear.bonus_label.text, "Preview should update the displayed damage bonus.")
+	_check(preview.attack_label.text == "4" and spear.attack_label.text == "4", "The spear and its preview should show the boosted attack in the bottom hexagon.")
 	_check(text.get_content_height() <= text.size.y, "Tooltip text must fit without clipping.")
 	_check(tooltip._effect_description(axe.data, 2).contains("]6[/color] de dano") and tooltip._effect_description(axe.data, 2).contains("]4[/color] na linha 4"), "Axe tooltip should include its bonus on both rows.")
 	_check(tooltip._effect_description(trap.data, 2).contains("]7[/color] de dano"), "Trap tooltip should include the active bonus.")
@@ -1220,6 +1221,7 @@ func _test_tooltips() -> void:
 	manager.state.set_card_hp(enemy.data, 7)
 	_check(text.text.contains("]7[/color]"), "An open enemy tooltip should update its HP.")
 	_check(preview.hp_label.text == enemy.hp_label.text, "Preview should update the enemy's HP.")
+	_check(preview.hp_label.text == "7" and preview.attack_label.text == "20" and enemy.attack_label.text == "20" and not preview.get_node("HP/Hexagon").visible, "The elephant and its preview should show strength 20 in the printed hexagon.")
 	manager.position = Vector2(-450, -100)
 	await process_frame
 	var bounds: Rect2 = root.get_visible_rect()
