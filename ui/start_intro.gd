@@ -10,6 +10,7 @@ var wind_progress := 0.0
 @onready var background: ColorRect = $Background
 @onready var story: Label = $Story
 @onready var prompt: Label = $Prompt
+@onready var gust_audio: AudioStreamPlayer = $GustAudio
 
 func begin(button: Button) -> void:
 	if intro_state != IntroState.MENU:
@@ -42,6 +43,10 @@ func _input(event: InputEvent) -> void:
 
 func _start_game() -> void:
 	intro_state = IntroState.TRANSITIONING
+	var tree := get_tree()
+	var menu := get_parent()
+	reparent(tree.root)
+	gust_audio.play()
 	var material := background.material as ShaderMaterial
 	material.set_shader_parameter("transition_mode", 1)
 	var cover := create_tween()
@@ -51,9 +56,6 @@ func _start_game() -> void:
 	await cover.finished
 	story.hide()
 	prompt.hide()
-	var tree := get_tree()
-	var menu := get_parent()
-	reparent(tree.root)
 	var error := tree.change_scene_to_packed(MAIN_SCENE)
 	if error != OK:
 		push_error("Cannot start the game (error %s)." % error)
@@ -74,6 +76,10 @@ func _start_game() -> void:
 	var reveal := create_tween()
 	reveal.tween_method(_set_transition_progress, 0.0, 1.0, 1.2)
 	await reveal.finished
+	hide()
+	set_process_input(false)
+	if gust_audio.playing:
+		await gust_audio.finished
 	queue_free()
 
 func _set_transition_progress(value: float) -> void:
