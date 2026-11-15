@@ -4,7 +4,7 @@ signal movement_updated
 
 const CardData = preload("res://cards/card_data.gd")
 const Text = preload("res://data/text.gd")
-const WATER_SHADER = preload("res://cards/card.gdshader")
+const FOIL_SHADER = preload("res://cards/card.gdshader")
 const BONUS_COLOR := Color(0.13, 0.21, 0.45, 0.95)
 const PENALTY_COLOR := Color(0.5, 0.12, 0.1, 0.95)
 
@@ -23,14 +23,19 @@ var movement_target := Vector2.ZERO
 func _ready() -> void:
 	if data != null:
 		sprite.texture = load(data.image_path)
-		if data.type == CardData.Type.ELEPHANT:
-			if not (sprite.material is ShaderMaterial and sprite.material.shader == WATER_SHADER):
-				var water_material := ShaderMaterial.new()
-				water_material.shader = WATER_SHADER
-				sprite.material = water_material
-		elif sprite.material is ShaderMaterial and sprite.material.shader == WATER_SHADER:
-			sprite.material = null
+		var foil_material := ShaderMaterial.new()
+		foil_material.shader = FOIL_SHADER
+		foil_material.set_shader_parameter("foil_strength", 0.0)
+		sprite.material = foil_material
 		refresh()
+
+func set_foil_hover(active: bool, mouse_position: Vector2 = Vector2.ZERO) -> void:
+	var material := sprite.material as ShaderMaterial
+	material.set_shader_parameter("foil_strength", 1.0 if active else 0.0)
+	if active:
+		var local_mouse := sprite.get_global_transform_with_canvas().affine_inverse() * mouse_position
+		var rect := sprite.get_rect()
+		material.set_shader_parameter("cursor_uv", (local_mouse - rect.position) / rect.size)
 
 func move_to(target: Vector2) -> void:
 	if movement_tween != null and movement_tween.is_running() and movement_target.is_equal_approx(target):

@@ -3,6 +3,7 @@ extends CanvasLayer
 const CardData = preload("res://cards/card_data.gd")
 const GameState = preload("res://game/game_state.gd")
 const Text = preload("res://data/text.gd")
+const StoryScreen = preload("res://ui/story_screen.gd")
 const CARD_SCENE: PackedScene = preload("res://cards/card.tscn")
 const HERD_SCALE := 2.0
 
@@ -11,6 +12,7 @@ var herd: Node2D
 var title: Label
 var enemies: Array[CardData] = []
 var result := GameState.Outcome.IN_PROGRESS
+var story_started := false
 
 func _ready() -> void:
 	layer = 50
@@ -44,11 +46,11 @@ func _ready() -> void:
 	hint.add_theme_color_override("font_outline_color", Color.BLACK)
 	hint.add_theme_constant_override("outline_size", 5)
 	hint.add_theme_font_size_override("font_size", 22)
-	hint.text = Text.get_text("restart_hint")
+	hint.text = Text.get_text("result_continue")
 	panel.add_child(hint)
 	hint.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-	hint.offset_left = -220.0
-	hint.offset_right = 220.0
+	hint.offset_left = -400.0
+	hint.offset_right = 400.0
 	hint.offset_top = 65.0
 	hint.offset_bottom = 105.0
 	get_viewport().size_changed.connect(_on_viewport_size_changed)
@@ -60,6 +62,21 @@ func show_result(outcome: GameState.Outcome, remaining_enemies: Array[CardData])
 	panel.show()
 	if outcome == GameState.Outcome.LOST:
 		_spawn_herd()
+
+func _unhandled_input(event: InputEvent) -> void:
+	if not panel.visible or story_started or get_tree().root.has_node("RestartTransition"):
+		return
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_SPACE:
+		get_viewport().set_input_as_handled()
+		story_started = true
+		var prefix := "victory" if result == GameState.Outcome.WON else "defeat"
+		var story := StoryScreen.new()
+		story.name = "StoryScreen"
+		add_child(story)
+		story.begin([
+			Text.get_text(prefix + "_paragraph_1"),
+			Text.get_text(prefix + "_paragraph_2"),
+		], Text.get_text("game_finished"))
 
 func _on_viewport_size_changed() -> void:
 	if result == GameState.Outcome.LOST:

@@ -5,13 +5,13 @@
 [ext_resource type="Texture2D" uid="uid://c8woetmbw4fyq" path="res://assets/background-playmatch.png" id="2_0xm2m"]
 [ext_resource type="AudioStream" uid="uid://b25hkck58rei3" path="res://assets/audio/combate-theme.mp3" id="2_dgpao"]
 [ext_resource type="Script" uid="uid://c0ci6gx6eap7u" path="res://ui/card_tooltip.gd" id="3_tooltip"]
-[ext_resource type="AudioStream" path="res://assets/audio/card_place_pcm16.wav" id="4_card_drop"]
-[ext_resource type="AudioStream" path="res://assets/audio/attack3.wav" id="5_axe_attack"]
-[ext_resource type="AudioStream" path="res://assets/audio/magic_entry_pcm16.wav" id="6_magic_entry"]
-[ext_resource type="AudioStream" path="res://assets/audio/arrow.mp3" id="7_spear_attack"]
-[ext_resource type="Script" path="res://game/screen_effects.gd" id="8_screen_effects"]
-[ext_resource type="Script" path="res://game/end_screen.gd" id="9_end_screen"]
-[ext_resource type="Shader" path="res://game/field_mist.gdshader" id="10_field_mist"]
+[ext_resource type="AudioStream" uid="uid://cdnmw8xof77c4" path="res://assets/audio/card_place_pcm16.wav" id="4_card_drop"]
+[ext_resource type="AudioStream" uid="uid://csc3mm6asd12o" path="res://assets/audio/attack3.wav" id="5_axe_attack"]
+[ext_resource type="AudioStream" uid="uid://cusaw0ch6e0fc" path="res://assets/audio/magic_entry_pcm16.wav" id="6_magic_entry"]
+[ext_resource type="AudioStream" uid="uid://cjlff1rcuxwwb" path="res://assets/audio/arrow.mp3" id="7_spear_attack"]
+[ext_resource type="Script" uid="uid://cn2l046w0psxp" path="res://game/screen_effects.gd" id="8_screen_effects"]
+[ext_resource type="Script" uid="uid://rfc3lt3f4sb3" path="res://game/end_screen.gd" id="9_end_screen"]
+[ext_resource type="Shader" uid="uid://bpjbgoenj8qpt" path="res://game/field_mist.gdshader" id="10_field_mist"]
 
 [sub_resource type="ShaderMaterial" id="FieldMistMaterial"]
 shader = ExtResource("10_field_mist")
@@ -26,22 +26,21 @@ border_color = Color(0.84, 0.67, 0.35, 1)
 
 [node name="Node2D" type="Node2D" unique_id=1371408541]
 
-[node name="AudioStreamPlayer2D2" type="AudioStreamPlayer2D" parent="." unique_id=671583148]
+[node name="ElephantSound" type="AudioStreamPlayer2D" parent="." unique_id=671583148]
 stream = ExtResource("1_5un7r")
-autoplay = true
 
 [node name="AudioStreamPlayer2D" type="AudioStreamPlayer2D" parent="." unique_id=1046565003]
 stream = ExtResource("2_dgpao")
 autoplay = true
 
 [node name="Sprite2D" type="Sprite2D" parent="." unique_id=159291417]
-material = SubResource("FieldMistMaterial")
 texture_filter = 3
+material = SubResource("FieldMistMaterial")
 position = Vector2(640.99994, 360.99997)
 scale = Vector2(10, 10)
 texture = ExtResource("2_0xm2m")
 
-[node name="EndScreen" type="CanvasLayer" parent="."]
+[node name="EndScreen" type="CanvasLayer" parent="." unique_id=1674821736]
 script = ExtResource("9_end_screen")
 
 [node name="CardManager" type="Node2D" parent="." unique_id=767093069]
@@ -49,22 +48,19 @@ script = ExtResource("1_0xm2m")
 
 [node name="Hand" type="Node2D" parent="CardManager" unique_id=1554000195]
 
-[node name="CardDropSound" type="AudioStreamPlayer" parent="CardManager"]
+[node name="CardDropSound" type="AudioStreamPlayer" parent="CardManager" unique_id=1056120754]
 stream = ExtResource("4_card_drop")
 
-[node name="AxeAttackSound" type="AudioStreamPlayer" parent="CardManager"]
+[node name="AxeAttackSound" type="AudioStreamPlayer" parent="CardManager" unique_id=1107816664]
 stream = ExtResource("5_axe_attack")
 
-[node name="SpearAttackSound" type="AudioStreamPlayer" parent="CardManager"]
+[node name="SpearAttackSound" type="AudioStreamPlayer" parent="CardManager" unique_id=1183333164]
 stream = ExtResource("7_spear_attack")
 
-[node name="MagicEntrySound" type="AudioStreamPlayer" parent="CardManager"]
+[node name="MagicEntrySound" type="AudioStreamPlayer" parent="CardManager" unique_id=1268555271]
 stream = ExtResource("6_magic_entry")
 
 [node name="HUD" type="CanvasLayer" parent="." unique_id=1206513264]
-
-[node name="ScreenEffects" type="CanvasLayer" parent="."]
-script = ExtResource("8_screen_effects")
 
 [node name="RestartHint" type="Label" parent="HUD" unique_id=24613470]
 anchors_preset = 1
@@ -78,6 +74,7 @@ grow_horizontal = 0
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 4
 theme_override_font_sizes/font_size = 19
+text = "Pressione R para reiniciar"
 horizontal_alignment = 2
 
 [node name="EffectMessage" type="Label" parent="HUD" unique_id=452227376]
@@ -90,6 +87,8 @@ theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 4
 theme_override_font_sizes/font_size = 19
 autowrap_mode = 2
+
+[node name="CardPreview" type="Node2D" parent="HUD" unique_id=2010330845]
 
 [node name="CardTooltip" type="PanelContainer" parent="HUD" unique_id=1554085408]
 visible = false
@@ -107,13 +106,34 @@ theme_override_constants/margin_top = 6
 theme_override_constants/margin_right = 8
 theme_override_constants/margin_bottom = 6
 
-[node name="Text" type="RichTextLabel" parent="HUD/CardTooltip/Margin" unique_id=2138657007]
+[node name="Sections" type="VBoxContainer" parent="HUD/CardTooltip/Margin" unique_id=492869813]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 12
+
+[node name="Name" type="Label" parent="HUD/CardTooltip/Margin/Sections" unique_id=1408056157]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.94, 0.8, 1)
+theme_override_font_sizes/font_size = 14
+autowrap_mode = 2
+
+[node name="Text" type="RichTextLabel" parent="HUD/CardTooltip/Margin/Sections" unique_id=2138657007]
 custom_minimum_size = Vector2(204, 0)
 layout_mode = 2
 mouse_filter = 2
 theme_override_colors/default_color = Color(1, 0.94, 0.8, 1)
 theme_override_font_sizes/normal_font_size = 13
 theme_override_font_sizes/bold_font_size = 14
+bbcode_enabled = true
+fit_content = true
+scroll_active = false
+
+[node name="Bonus" type="RichTextLabel" parent="HUD/CardTooltip/Margin/Sections" unique_id=1263192321]
+visible = false
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/default_color = Color(1, 0.94, 0.8, 1)
+theme_override_font_sizes/normal_font_size = 13
 bbcode_enabled = true
 fit_content = true
 scroll_active = false
@@ -132,5 +152,8 @@ theme_override_colors/font_color = Color(1, 0.3, 0.3, 1)
 theme_override_constants/outline_size = 4
 theme_override_font_sizes/font_size = 20
 autowrap_mode = 2
+
+[node name="ScreenEffects" type="CanvasLayer" parent="." unique_id=1513462413]
+script = ExtResource("8_screen_effects")
 
 [connection signal="timeout" from="HUD/CardTooltip/HoverTimer" to="HUD/CardTooltip" method="_on_hover_timer_timeout"]

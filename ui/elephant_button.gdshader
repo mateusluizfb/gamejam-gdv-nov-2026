@@ -11,27 +11,27 @@ void vertex() {
 		* (1.0 + 2.0 * UV_PADDING) * (1.0 + 0.15 * highlight);
 }
 
-float sample_alpha(sampler2D sprite, vec2 uv) {
+float uv_mask(vec2 uv) {
 	vec2 inside = step(vec2(0.0), uv) * step(uv, vec2(1.0));
-	return texture(sprite, uv).a * inside.x * inside.y;
-}
-
-float ring_alpha(sampler2D sprite, vec2 uv, vec2 radius) {
-	float alpha = 0.0;
-	for (int i = 0; i < 12; i++) {
-		float angle = float(i) * TAU / 12.0;
-		alpha += sample_alpha(sprite, uv + vec2(cos(angle), sin(angle)) * radius);
-	}
-	return alpha / 12.0;
+	return inside.x * inside.y;
 }
 
 void fragment() {
 	vec2 uv = UV * (1.0 + 2.0 * UV_PADDING) - UV_PADDING;
 	vec3 sprite = mix(texture(TEXTURE, uv).rgb, vec3(1.0), 0.08 * highlight);
-	float sprite_alpha = sample_alpha(TEXTURE, uv);
-	float halo = ring_alpha(TEXTURE, uv, TEXTURE_PIXEL_SIZE * 2.0) * 0.45
-		+ ring_alpha(TEXTURE, uv, TEXTURE_PIXEL_SIZE * 5.0) * 0.36
-		+ ring_alpha(TEXTURE, uv, TEXTURE_PIXEL_SIZE * 9.0) * 0.19;
+	float sprite_alpha = texture(TEXTURE, uv).a * uv_mask(uv);
+	float halo = 0.0;
+	for (int i = 0; i < 12; i++) {
+		float angle = float(i) * TAU / 12.0;
+		vec2 direction = vec2(cos(angle), sin(angle)) * TEXTURE_PIXEL_SIZE;
+		vec2 near_uv = uv + direction * 2.0;
+		vec2 middle_uv = uv + direction * 5.0;
+		vec2 far_uv = uv + direction * 9.0;
+		halo += texture(TEXTURE, near_uv).a * uv_mask(near_uv) * 0.45;
+		halo += texture(TEXTURE, middle_uv).a * uv_mask(middle_uv) * 0.36;
+		halo += texture(TEXTURE, far_uv).a * uv_mask(far_uv) * 0.19;
+	}
+	halo /= 12.0;
 	float pulse = 0.5 - 0.5 * cos(TIME * PI);
 	float glow_strength = mix(0.65, 1.45, pulse) + 0.25 * highlight;
 	float glow_alpha = clamp(halo * glow_strength, 0.0, 1.0) * (1.0 - sprite_alpha);

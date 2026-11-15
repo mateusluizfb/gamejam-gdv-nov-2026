@@ -9,6 +9,7 @@
 [ext_resource type="AudioStream" uid="uid://catknpw0p3vvh" path="res://assets/audio/small-wind.mp3" id="7_gust"]
 [ext_resource type="Texture2D" uid="uid://dltmx2066psic" path="res://assets/elefantes.png" id="8_elephants"]
 [ext_resource type="Shader" uid="uid://qx7tp2p5j8vf" path="res://ui/elephant_button.gdshader" id="9_elephant_shader"]
+[ext_resource type="Shader" path="res://ui/menu_mist.gdshader" id="8_menu_mist"]
 
 [sub_resource type="ShaderMaterial" id="ElephantButtonMaterial"]
 resource_local_to_scene = true
@@ -29,6 +30,10 @@ shader = ExtResource("4_intro")
 shader_parameter/wind_progress = 0.0
 shader_parameter/transition_mode = 0
 shader_parameter/transition_progress = 0.0
+
+[sub_resource type="ShaderMaterial" id="MenuMistMaterial"]
+resource_local_to_scene = true
+shader = ExtResource("8_menu_mist")
 
 [node name="Control" type="Control" unique_id=75429410]
 layout_mode = 3
@@ -82,9 +87,21 @@ stream = ExtResource("3_nledq")
 stream = ExtResource("6_wind")
 autoplay = true
 
+[node name="Mist" type="CanvasLayer" parent="."]
+layer = 52
+
+[node name="Background" type="ColorRect" parent="Mist"]
+visible = false
+material = SubResource("MenuMistMaterial")
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
 [node name="Opening" type="CanvasLayer" parent="." unique_id=1487861026]
 layer = 51
-visible = false
 
 [node name="Background" type="ColorRect" parent="Opening" unique_id=1464493529]
 material = SubResource("OpeningMaterial")

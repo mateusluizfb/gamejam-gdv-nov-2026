@@ -8,16 +8,19 @@ const StartingData = preload("res://data/starting_data.gd")
 const GameState = preload("res://game/game_state.gd")
 const CardTooltip = preload("res://ui/card_tooltip.gd")
 const CardParticles = preload("res://game/card_particles.gd")
-const RestartFlash = preload("res://game/restart_flash.gd")
+const RestartTransition = preload("res://game/restart_transition.gd")
 const TargetArrow = preload("res://game/target_arrow.gd")
 const ScreenEffects = preload("res://game/screen_effects.gd")
 const EndScreen = preload("res://game/end_screen.gd")
 const Text = preload("res://data/text.gd")
 const CARD_SCENE: PackedScene = preload("res://cards/card.tscn")
+const MAGIC_BURN_SHADER: Shader = preload("res://cards/magic_burn.gdshader")
 const STARTING_DATA_PATH := "res://starting_cards.csv"
 const GRID_ORIGIN := Vector2(450, 100)
 const HAND_GAP := 40.0
 const EFFECT_DELAY := 0.5
+const MAGIC_BURN_DURATION := 0.6
+const BOARD_HOVER_SCALE := 1.25
 
 var board: Board
 var hand_layout: Hand
@@ -29,6 +32,10 @@ var highlighted_row := -1
 var valid_placement_cells: Array[Vector2i] = []
 var targeting_arrow: TargetArrow
 var cursor_position := Vector2.ZERO
+var hovered_board_card: Node2D
+var hovered_board_scale := Vector2.ONE
+var hovered_board_z_index := 0
+var foil_card: Node2D
 
 @onready var card_drop_sound: AudioStreamPlayer = $CardDropSound
 @onready var axe_attack_sound: AudioStreamPlayer = $AxeAttackSound
@@ -71,6 +78,8 @@ func _ready() -> void:
 	if Engine.is_editor_hint():
 		queue_redraw()
 		return
+	if not get_tree().root.has_node("RestartTransition"):
+		$"../ElephantSound".play()
 	state.changed.connect(_refresh_state)
 	state.phase_changed.connect(_refresh_targeting)
 	state.card_placed.connect(_place_card_view)
@@ -123,6 +132,8 @@ func _new_card_view(card: CardData) -> Node2D:
 func _on_card_movement(view: Node2D) -> void:
 	if targeting_arrow != null and state.pending_card == view.data:
 		targeting_arrow.set_points(to_local(view.global_position), targeting_arrow.end)
+	if foil_card == view:
+		view.set_foil_hover(true, cursor_position)
 
 func _refresh_state() -> void:
 	for card in card_views:
@@ -163,6 +174,8 @@ func _remove_card_view(card: CardData) -> void:
 		push_error("Removed card has no view.")
 		return
 	var view: Node2D = card_views[card]
+	if hovered_board_card == view:
+		_clear_card_hover()
 	var tooltip := get_node_or_null("../HUD/CardTooltip") as CardTooltip
 	if tooltip != null and tooltip.hovered_card == view:
 		tooltip.set_hovered(null, 0)
@@ -170,10 +183,25 @@ func _remove_card_view(card: CardData) -> void:
 	if not board.remove_card(view, cell):
 		return
 	card_views.erase(card)
-	view.queue_free()
+	if card.type == CardData.Type.MAGIC and state.pending_card == card and state.phase == GameState.Phase.RESOLVING:
+		view.stop_moving()
+		view.position = board.cell_position(cell)
+		var material := ShaderMaterial.new()
+		material.shader = MAGIC_BURN_SHADER
+		material.set_shader_parameter("burn_progress", 0.0)
+		view.get_node("Sprite2D").material = material
+		var tween := view.create_tween().set_parallel(true)
+		tween.tween_property(material, "shader_parameter/burn_progress", 1.0, MAGIC_BURN_DURATION)
+		for child in view.get_children():
+			if child is Control:
+				tween.tween_property(child, "modulate:a", 0.0, MAGIC_BURN_DURATION)
+		tween.chain().tween_callback(view.queue_free)
+	else:
+		view.queue_free()
 
 func _place_card_view(card: CardData, cell: Vector2i) -> void:
 	var view: Node2D = card_views[card]
+	_clear_card_hover()
 	if dragged_card == view:
 		CardParticles.stop_drag(view)
 		dragged_card = null
@@ -193,6 +221,8 @@ func _place_card_view(card: CardData, cell: Vector2i) -> void:
 
 func _return_card_view(card: CardData, index: int, cell: Vector2i) -> void:
 	var view: Node2D = card_views[card]
+	if hovered_board_card == view:
+		_clear_card_hover()
 	if not board.remove_card(view, cell):
 		return
 	if card.type == CardData.Type.MAGIC:
@@ -209,6 +239,8 @@ func _restore_card_view(card: CardData, cell: Vector2i) -> void:
 	view.position = board.cell_position(cell)
 
 func _move_card_view(card: CardData, from: Vector2i, to: Vector2i) -> void:
+	if hovered_board_card == card_views[card]:
+		_clear_card_hover()
 	var tooltip := get_node_or_null("../HUD/CardTooltip") as CardTooltip
 	if tooltip != null and tooltip.hovered_card == card_views[card]:
 		tooltip.set_hovered(null, 0)
@@ -219,9 +251,9 @@ func _resolve_after_delay(token: int) -> void:
 		var target_view: Node2D = card_views[state.pending_target]
 		CardParticles.damage(self, to_local(target_view.global_position))
 	await get_tree().create_timer(EFFECT_DELAY).timeout
-	var restart_flash := get_tree().root.get_node_or_null("RestartFlash")
-	if restart_flash != null:
-		await restart_flash.finished
+	var restart_transition := get_tree().root.get_node_or_null("RestartTransition")
+	if restart_transition != null:
+		await restart_transition.finished
 	state.resolve_effect(token)
 
 func _show_trap_effect(row: int) -> void:
@@ -236,6 +268,7 @@ func _show_feedback(message: String) -> void:
 		label.text = message
 
 func _show_game_result(outcome: GameState.Outcome) -> void:
+	_clear_card_hover()
 	var tooltip := get_node_or_null("../HUD/CardTooltip") as CardTooltip
 	if tooltip != null and tooltip.is_node_ready():
 		tooltip.set_hovered(null, 0)
@@ -260,6 +293,7 @@ func _exit_tree() -> void:
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_MOUSE_EXIT and not Engine.is_editor_hint():
+		_clear_card_hover()
 		var tooltip := get_node_or_null("../HUD/CardTooltip") as CardTooltip
 		if tooltip != null and tooltip.is_node_ready():
 			tooltip.set_hovered(null, 0)
@@ -269,15 +303,15 @@ func _notification(what: int) -> void:
 func _input(event: InputEvent) -> void:
 	if Engine.is_editor_hint() or board == null:
 		return
-	if get_tree().root.has_node("RestartFlash"):
+	if get_tree().root.has_node("RestartTransition"):
 		return
 	if event is InputEventMouse:
 		cursor_position = event.position
 	if event.is_action_pressed("restart") and not event.is_echo():
-		var flash := RestartFlash.new()
-		flash.name = "RestartFlash"
-		get_tree().root.add_child(flash)
-		flash.start()
+		var transition := RestartTransition.new()
+		transition.name = "RestartTransition"
+		get_tree().root.add_child(transition)
+		transition.start()
 		return
 	if state.phase == GameState.Phase.FINISHED:
 		return
@@ -320,18 +354,16 @@ func _input(event: InputEvent) -> void:
 			_move_drag(event.position)
 
 func _enemy_at(mouse_position: Vector2) -> CardData:
-	for row in range(2):
-		for view in board.cards[row]:
-			if view == null or view.data.owner != CardData.Owner.ENEMY:
-				continue
-			if hand_layout.card_contains_point(view, mouse_position):
-				return view.data
+	var view := _board_card_at(mouse_position)
+	if view != null and view.data.owner == CardData.Owner.ENEMY and view.data.board_position.y < 2:
+		return view.data
 	return null
 
 func _begin_drag(mouse_position: Vector2) -> void:
 	var card := hand_layout.card_at(mouse_position)
 	if card == null:
 		return
+	_clear_card_hover()
 	var tooltip := get_node_or_null("../HUD/CardTooltip") as CardTooltip
 	if tooltip != null:
 		tooltip.set_hovered(null, 0)
@@ -359,8 +391,9 @@ func _end_drag(mouse_position: Vector2) -> void:
 		hand_layout.place_cards()
 	dragged_card = null
 	_clear_placement_highlights()
-	_update_hand_hover(mouse_position)
-	_update_tooltip_hover(mouse_position)
+	if state.phase != GameState.Phase.FINISHED:
+		_update_hand_hover(mouse_position)
+		_update_tooltip_hover(mouse_position)
 
 func _update_drop_highlight() -> void:
 	var cells: Array[Vector2i] = []
@@ -390,21 +423,54 @@ func _update_hand_hover(mouse_position: Vector2) -> void:
 	hand_layout.set_hovered(hand_layout.card_at(mouse_position))
 
 func _update_tooltip_hover(mouse_position: Vector2) -> void:
-	var tooltip := get_node_or_null("../HUD/CardTooltip") as CardTooltip
-	if tooltip == null:
-		return
 	var view: Node2D
 	if state.phase == GameState.Phase.IDLE:
 		view = hand_layout.hovered_card
 	if view == null:
+		view = _board_card_at(mouse_position)
+	_set_board_hover(view if view != null and board.find_card_cell(view) != Vector2i(-1, -1) else null)
+	if foil_card != view:
+		if is_instance_valid(foil_card):
+			foil_card.set_foil_hover(false)
+		foil_card = view
+	if is_instance_valid(foil_card):
+		foil_card.set_foil_hover(true, mouse_position)
+	var tooltip := get_node_or_null("../HUD/CardTooltip") as CardTooltip
+	if tooltip != null:
+		tooltip.set_hovered(view, _card_damage_bonus(view) if view != null else 0)
+
+func _board_card_at(mouse_position: Vector2) -> Node2D:
+	for row in board.cards:
+		for candidate in row:
+			if candidate != null and candidate != hovered_board_card and hand_layout.card_contains_point(candidate, mouse_position):
+				return candidate
+	if is_instance_valid(hovered_board_card) and hand_layout.card_contains_point(hovered_board_card, mouse_position):
+		return hovered_board_card
+	return null
+
+func _set_board_hover(view: Node2D) -> void:
+	if hovered_board_card == view:
+		return
+	if is_instance_valid(hovered_board_card):
+		hovered_board_card.scale = hovered_board_scale
+		hovered_board_card.z_index = hovered_board_z_index
+	hovered_board_card = view
+	if view != null:
+		hovered_board_scale = view.scale
+		hovered_board_z_index = view.z_index
+		var top_z := view.z_index
 		for row in board.cards:
 			for candidate in row:
-				if candidate != null and hand_layout.card_contains_point(candidate, mouse_position):
-					view = candidate
-					break
-			if view != null:
-				break
-	tooltip.set_hovered(view, _card_damage_bonus(view) if view != null else 0)
+				if candidate != null:
+					top_z = maxi(top_z, candidate.z_index)
+		view.scale = hovered_board_scale * BOARD_HOVER_SCALE
+		view.z_index = mini(top_z + 1, RenderingServer.CANVAS_ITEM_Z_MAX)
+
+func _clear_card_hover() -> void:
+	_set_board_hover(null)
+	if is_instance_valid(foil_card):
+		foil_card.set_foil_hover(false)
+	foil_card = null
 
 func _card_damage_bonus(view: Node2D) -> int:
 	if state.pending_card == view.data and view.data.type in [CardData.Type.AXE, CardData.Type.SPEAR, CardData.Type.TRAP]:

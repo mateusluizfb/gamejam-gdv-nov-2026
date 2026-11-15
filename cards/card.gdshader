@@ -1,7 +1,7 @@
 shader_type canvas_item;
 
-uniform float wave_strength : hint_range(0.0, 0.03) = 0.008;
-uniform float wave_speed : hint_range(0.0, 5.0) = 1.4;
+uniform vec2 cursor_uv = vec2(0.5);
+uniform float foil_strength : hint_range(0.0, 1.0) = 0.0;
 
 varying vec4 vertex_color;
 
@@ -10,15 +10,11 @@ void vertex() {
 }
 
 void fragment() {
-	float time = TIME * wave_speed;
-	vec2 ripple = vec2(
-		sin(UV.y * 30.0 + time) + 0.5 * sin(UV.y * 55.0 - time * 0.7),
-		sin(UV.x * 24.0 - time * 0.8)
-	) * wave_strength;
-	vec2 edge = TEXTURE_PIXEL_SIZE * 0.5;
-	vec4 card = texture(TEXTURE, clamp(UV + ripple, edge, vec2(1.0) - edge));
-	float shimmer = 0.5 + 0.5 * sin(UV.x * 25.0 + UV.y * 20.0 - time);
-	card.rgb = mix(card.rgb, card.rgb * vec3(0.85, 0.96, 1.12), 0.4);
-	card.rgb += vec3(0.01, 0.025, 0.04) * shimmer;
-	COLOR = card * vertex_color;
+	vec4 card = texture(TEXTURE, UV) * vertex_color;
+	vec2 offset = UV - cursor_uv;
+	float highlight = exp(-dot(offset, offset) * 5.0);
+	float band = pow(0.5 + 0.5 * cos((UV.x + UV.y - cursor_uv.x * 0.7 - cursor_uv.y * 0.7) * 12.0), 6.0);
+	vec3 rainbow = 0.5 + 0.5 * cos(6.28318 * (UV.x + UV.y + cursor_uv.x - cursor_uv.y + vec3(0.0, 0.33, 0.67)));
+	card.rgb += (rainbow * 0.25 + vec3(band * 0.3)) * highlight * foil_strength;
+	COLOR = card;
 }

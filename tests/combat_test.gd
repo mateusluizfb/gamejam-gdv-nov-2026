@@ -43,9 +43,10 @@ func _test_effects() -> void:
 	_check(state.damage_bonus == 0, "Magic should not apply before resolution.")
 	_resolve(state)
 	_check(state.damage_bonus == 2, "Magic should add +2.")
-	_check(state.play_card(magic2, Vector2i(1, 2)), "Second Magic should be playable.")
+	_check(magic.board_position == null and state.board[2][0] == null and not state.player.hand.has(magic), "Resolved Magic should leave the board and free its cell.")
+	_check(state.play_card(magic2, Vector2i(0, 2)), "A second Magic should be playable in the freed cell.")
 	_resolve(state)
-	_check(state.damage_bonus == 4, "Magic should stack through another Magic.")
+	_check(state.damage_bonus == 4 and state.board[2][0] == null, "Magic should stack and free its cell after each resolution.")
 	_check(state.play_card(axe, Vector2i(2, 2)), "Axe should be playable.")
 	_check(state.phase == GameState.Phase.TARGETING and state.pending_damage == 8, "Upper Axe should use 4 damage plus stacked bonus.")
 	_check(state.select_target(first), "First Axe target should be selectable.")
@@ -308,25 +309,55 @@ func _test_row_penalty_badges() -> void:
 	_check(state.phase == GameState.Phase.IDLE and badge.visible and badge.text == "-2 DANO", "The row penalty should remain visible after the attack resolves.")
 	scene.free()
 
-func _test_elephant_water_material() -> void:
+func _test_card_hover_and_foil() -> void:
 	var scene: Node = load("res://game/main.tscn").instantiate()
 	root.add_child(scene)
 	var manager = scene.get_node("CardManager")
+	manager.position = Vector2(30, 40)
+	manager.scale = Vector2(1.3, 1.3)
+	var shader: Shader = preload("res://cards/card.gdshader")
 	for card in manager.card_views:
 		var sprite := manager.card_views[card].get_node("Sprite2D") as Sprite2D
-		if card.type == CardData.Type.ELEPHANT:
-			_check(sprite.material is ShaderMaterial and sprite.material.shader == preload("res://cards/card.gdshader"), "Elephants should use the water shader.")
-		else:
-			_check(not sprite.material is ShaderMaterial or sprite.material.shader != preload("res://cards/card.gdshader"), "Player cards should not use the water shader.")
-	manager._refresh_state()
-	var elephant: CardData = manager.state.board[0][0]
-	var material: Material = manager.card_views[elephant].get_node("Sprite2D").material
-	_check(material is ShaderMaterial, "Refreshing cards should preserve the elephant shader.")
-	var fresh_view = load("res://cards/card.tscn").instantiate()
-	fresh_view.data = elephant
-	fresh_view.get_node("Sprite2D").material = null
-	scene.add_child(fresh_view)
-	_check(fresh_view.get_node("Sprite2D").material is ShaderMaterial and fresh_view.get_node("Sprite2D").material.shader == preload("res://cards/card.gdshader"), "Elephants should receive the shader even without a scene material.")
+		_check(sprite.material is ShaderMaterial and sprite.material.shader == shader and is_zero_approx(sprite.material.get_shader_parameter("foil_strength")), "Every card should start with an inactive foil, including elephants.")
+	var first: Node2D = manager.card_views[manager.state.board[0][0]]
+	var second: Node2D = manager.card_views[manager.state.board[0][1]]
+	first.scale = Vector2(0.8, 1.1)
+	first.z_index = 3
+	var sprite := first.get_node("Sprite2D") as Sprite2D
+	var material := sprite.material as ShaderMaterial
+	var center := sprite.get_global_transform_with_canvas() * sprite.get_rect().get_center()
+	_motion(manager, center)
+	_check(first.scale.is_equal_approx(Vector2(1.0, 1.375)) and first.z_index > 3, "A hovered board card should grow by 25% and appear above its neighbors.")
+	_check(material.get_shader_parameter("foil_strength") == 1.0 and material.get_shader_parameter("cursor_uv").is_equal_approx(Vector2(0.5, 0.5)), "Foil should follow the cursor in transformed card coordinates.")
+	var point := sprite.get_rect().position + sprite.get_rect().size * Vector2(0.7, 0.3)
+	_motion(manager, sprite.get_global_transform_with_canvas() * point)
+	_check(material.get_shader_parameter("cursor_uv").is_equal_approx(Vector2(0.7, 0.3)), "Moving over a card should update its foil position.")
+	_motion(manager, second.get_global_transform_with_canvas() * Vector2.ZERO)
+	_check(first.scale.is_equal_approx(Vector2(0.8, 1.1)) and first.z_index == 3 and is_zero_approx(material.get_shader_parameter("foil_strength")), "Switching board cards should restore the first card and disable its foil.")
+	_check(second.scale.is_equal_approx(Vector2.ONE * 1.25), "The next board card should enlarge.")
+	var hand_card: Node2D = manager.hand_layout.cards[0]
+	_motion(manager, hand_card.get_global_transform_with_canvas() * Vector2.ZERO)
+	var hand_material := hand_card.get_node("Sprite2D").material as ShaderMaterial
+	_check(second.scale.is_equal_approx(Vector2.ONE) and hand_material.get_shader_parameter("foil_strength") == 1.0, "Hand cards should receive foil while preserving their existing hover behavior.")
+	var old_uv: Vector2 = hand_material.get_shader_parameter("cursor_uv")
+	hand_card._set_movement_position(hand_card.position + Vector2(0, 5))
+	_check(not hand_material.get_shader_parameter("cursor_uv").is_equal_approx(old_uv), "Foil should track a stationary cursor as the hovered card moves.")
+	_button(manager, hand_card.get_global_transform_with_canvas() * Vector2.ZERO, true)
+	_check(is_zero_approx(hand_material.get_shader_parameter("foil_strength")), "Dragging should disable the foil.")
+	_escape(manager)
+	_motion(manager, first.get_global_transform_with_canvas() * Vector2.ZERO)
+	manager.notification(Node.NOTIFICATION_WM_MOUSE_EXIT)
+	_check(first.scale.is_equal_approx(Vector2(0.8, 1.1)) and is_zero_approx(material.get_shader_parameter("foil_strength")), "Leaving the window should clear board hover and foil.")
+	_check(manager.state.play_card(hand_card.data, Vector2i(0, 2)), "The hand card should be playable for the board hover check.")
+	hand_card.stop_moving()
+	hand_card.position = manager.board.cell_position(Vector2i(0, 2))
+	_motion(manager, hand_card.get_global_transform_with_canvas() * Vector2.ZERO)
+	_check(hand_card.scale.is_equal_approx(Vector2.ONE * 1.25) and hand_material.get_shader_parameter("foil_strength") == 1.0, "A played card should enlarge and show foil on the board, including while targeting.")
+	manager.state.cancel_play()
+	_check(hand_card.scale.is_equal_approx(Vector2.ONE) and is_zero_approx(hand_material.get_shader_parameter("foil_strength")), "Returning a hovered board card to the hand should restore its transform and foil.")
+	_motion(manager, first.get_global_transform_with_canvas() * Vector2.ZERO)
+	manager.state.set_card_hp(first.data, 0)
+	_check(manager.hovered_board_card == null and manager.foil_card == null, "Removing a hovered card should clear hover state.")
 	scene.free()
 
 func _test_card_drop_sound() -> void:
@@ -444,8 +475,13 @@ func _test_magic_entry_sound() -> void:
 
 	_drag(manager, magic, manager.board.cell_position(Vector2i(1, 2)))
 	_check(sound.playing, "Replaying Magic after cancellation should play the entry sound again.")
+	var magic_data: CardData = magic.data
 	await create_timer(0.6).timeout
 	_check(sound.playing and state.damage_bonus == 2, "The entry sound should continue naturally when Magic resolves.")
+	_check(state.board[2][1] == null and manager.board.cards[2][1] == null and not manager.card_views.has(magic_data), "Resolved Magic should immediately free its logical and visual board cell.")
+	var burn_material := magic.get_node("Sprite2D").material as ShaderMaterial
+	var burn_progress: float = burn_material.get_shader_parameter("burn_progress")
+	_check(burn_material.shader == load("res://cards/magic_burn.gdshader") and burn_progress > 0.0 and burn_progress < 1.0, "Resolved Magic should burn away with the fire shader.")
 	var axe: Node2D = manager.hand_layout.cards[0]
 	var buff_particles := axe.get_node_or_null("MagicBuffAura") as ColorRect
 	_check(magic.get_node_or_null("MagicBuffAura") == null, "A played Magic card should not retain the bonus.")
@@ -456,6 +492,7 @@ func _test_magic_entry_sound() -> void:
 	_check(axe.get_node_or_null("MagicBuffAura") == buff_particles, "Refreshing state should not restart existing buff particles.")
 	sound.stop()
 	await create_timer(1.8).timeout
+	_check(not is_instance_valid(magic), "The Magic view should be removed after the burn animation.")
 	_check(axe.get_node_or_null("MagicBuffAura") == buff_particles and buff_particles.visible, "Buff aura should persist until the bonus expires.")
 	_drag(manager, axe, manager.board.cell_position(Vector2i(0, 3)))
 	_check(not sound.playing, "Placing a non-Magic card should not play the Magic entry sound.")
@@ -734,13 +771,13 @@ func _test_targeting_effects() -> void:
 	restart.keycode = KEY_R
 	restart.pressed = true
 	manager._input(restart)
-	await create_timer(0.75).timeout
+	await create_timer(1.3).timeout
 	_check(current_scene != null and current_scene != scene, "Restart should reload while targeting.")
 	if current_scene != null and current_scene != scene:
 		var new_manager = current_scene.get_node("CardManager")
 		var new_enemy: Node2D = new_manager.card_views[new_manager.state.board[0][0]]
 		_check(new_manager.get_node_or_null("TargetArrow") == null and new_enemy.get_node_or_null("TargetAura") == null, "Restarted game should not retain targeting effects.")
-	await create_timer(0.75).timeout
+	await create_timer(1.3).timeout
 	if current_scene != null:
 		current_scene.free()
 		current_scene = null
@@ -854,6 +891,38 @@ func _test_ui() -> void:
 		hand_index += 1
 	layout_scene.free()
 
+func _test_result_story(end_screen: Node, prefix: String) -> void:
+	var original := Text.get_text(prefix + "_paragraph_2")
+	Text.config.set_value("text", prefix + "_paragraph_2", prefix + " second paragraph")
+	var space := InputEventKey.new()
+	space.keycode = KEY_SPACE
+	space.pressed = true
+	root.push_input(space)
+	var story = end_screen.get_node_or_null("StoryScreen")
+	_check(story != null, "Space on a result should open its story.")
+	if story == null:
+		Text.config.set_value("text", prefix + "_paragraph_2", original)
+		return
+	_check(story.label.text == Text.get_text(prefix + "_paragraph_1") and story.layer > end_screen.layer, "The result story should cover the result with its first paragraph.")
+	_check(story.prompt.visible and story.prompt.text == "Aperte ESPACO para continuar" and story.prompt.anchor_top == 1.0, "Result paragraphs should show the bottom Space hint.")
+	root.push_input(space)
+	await create_timer(0.3).timeout
+	_check(story.background.modulate.a > 0.0 and story.background.modulate.a < 1.0, "The result should gradually blend into the story.")
+	await create_timer(1.0).timeout
+	_check(story.paragraph_index == 0, "Space during the reveal should not skip the result paragraph.")
+	root.push_input(space)
+	await create_timer(0.15).timeout
+	var progress: float = story.text_material.get_shader_parameter("spawn_progress")
+	_check(progress > 0.0 and progress < 1.0 and story.label.text == Text.get_text(prefix + "_paragraph_1"), "The current paragraph should vanish with the preview shader before changing.")
+	await create_timer(0.85).timeout
+	_check(story.label.text == prefix + " second paragraph", "The correct result's second paragraph should be shown.")
+	root.push_input(space)
+	await create_timer(1.0).timeout
+	_check(story.complete and story.label.text == "Game finished" and not story.prompt.visible, "The result story should end on the finished screen without a Space hint.")
+	root.push_input(space)
+	_check(story.label.text == "Game finished", "Space should not leave the finished screen.")
+	Text.config.set_value("text", prefix + "_paragraph_2", original)
+
 func _test_end_screens() -> void:
 	var victory_scene: Node = load("res://game/main.tscn").instantiate()
 	root.add_child(victory_scene)
@@ -869,6 +938,7 @@ func _test_end_screens() -> void:
 	var victory = victory_scene.get_node("EndScreen")
 	_check(victory_state.outcome == GameState.Outcome.WON and victory.panel.visible and victory.title.text == "VITÓRIA!" and victory.herd.get_child_count() == 0, "Victory should show its large message without a herd.")
 	_check(victory_manager.dragged_card == null and not dragged.get_node("DragAura").visible, "Victory should stop any active drag.")
+	await _test_result_story(victory, "victory")
 	victory_scene.free()
 
 	var scene: Node = load("res://game/main.tscn").instantiate()
@@ -911,15 +981,16 @@ func _test_end_screens() -> void:
 			first_bounds = false
 		var viewport_size := root.get_visible_rect().size
 		_check(bounds.position.x <= 0.0 and bounds.position.y <= 0.0 and bounds.end.x >= viewport_size.x and bounds.end.y >= viewport_size.y, "The herd should cover the viewport.")
+	await _test_result_story(end_screen, "defeat")
 	var restart := InputEventKey.new()
 	restart.keycode = KEY_R
 	restart.pressed = true
 	manager._input(restart)
-	await create_timer(0.75).timeout
+	await create_timer(1.3).timeout
 	_check(current_scene != null and current_scene != scene, "Restart should work after defeat.")
 	if current_scene != null and current_scene != scene:
 		_check(current_scene.get_node("CardManager").state.outcome == GameState.Outcome.IN_PROGRESS and not current_scene.get_node("EndScreen").panel.visible, "Restart should clear the end screen and restore the game.")
-	await create_timer(0.7).timeout
+	await create_timer(1.3).timeout
 	if current_scene != null:
 		current_scene.free()
 		current_scene = null
@@ -928,6 +999,8 @@ func _test_restart() -> void:
 	var scene: Node = load("res://game/main.tscn").instantiate()
 	root.add_child(scene)
 	current_scene = scene
+	var elephant_sound := scene.get_node("ElephantSound") as AudioStreamPlayer2D
+	_check(elephant_sound.playing, "The elephant sound should play when the game first starts.")
 	var manager := scene.get_node("CardManager") as Node2D
 	var old_state = manager.state
 	var hint := scene.get_node("HUD/RestartHint") as Label
@@ -948,54 +1021,104 @@ func _test_restart() -> void:
 	event.echo = false
 	Input.parse_input_event(event)
 	await process_frame
-	var flash := root.get_node_or_null("RestartFlash")
-	_check(flash != null and current_scene == scene, "Restart should begin with a fade before reloading.")
-	if flash == null:
+	var transition := root.get_node_or_null("RestartTransition")
+	_check(transition != null and current_scene == scene, "Restart should begin with wind before reloading.")
+	if transition == null:
 		scene.free()
 		current_scene = null
 		return
 	var reload_progress := []
-	scene.tree_exiting.connect(func() -> void: reload_progress.append(flash.progress))
-	_check(flash.flash.anchor_right == 1.0 and flash.flash.anchor_bottom == 1.0 and flash.layer > 1, "Flash should cover the viewport above the HUD.")
+	scene.tree_exiting.connect(func() -> void: reload_progress.append(transition.progress))
+	_check(transition.background.anchor_right == 1.0 and transition.background.anchor_bottom == 1.0 and transition.layer > 50, "Wind should cover the viewport above the HUD and end screen.")
+	_check(transition.wind_material.shader == load("res://ui/start_intro.gdshader") and transition.wind_material.get_shader_parameter("transition_mode") == 1, "Restart should use the start-screen wind shader to cover the game.")
+	_check(transition.gust_audio.playing and transition.gust_audio.stream.resource_path == "res://assets/audio/small-wind.mp3", "Restart should play the same gust as the start-screen transition.")
+	var gust_audio: AudioStreamPlayer = transition.gust_audio
 	var cancel := InputEventAction.new()
 	cancel.action = "ui_cancel"
 	cancel.pressed = true
 	manager._input(cancel)
-	_check(old_state.pending_card == magic, "Gameplay input should be blocked during the flash.")
+	_check(old_state.pending_card == magic, "Gameplay input should be blocked during the wind transition.")
 	Input.parse_input_event(event)
 	await create_timer(0.25).timeout
-	var progress: float = flash.progress
-	_check(progress > 0.0 and progress < 1.0 and current_scene == scene, "Black fade should appear before reloading.")
-	_check(old_state.damage_bonus == 0, "Pending effects should not resolve during the restart fade.")
-	await create_timer(0.46).timeout
-	_check(current_scene != scene and root.get_node_or_null("RestartFlash") == flash, "Scene should reload while the fade remains visible.")
+	var progress: float = transition.progress
+	_check(progress > 0.0 and progress < 1.0 and current_scene == scene, "Wind should sweep across the screen before reloading.")
+	_check(old_state.damage_bonus == 0, "Pending effects should not resolve during the restart transition.")
+	await create_timer(1.05).timeout
+	_check(current_scene != scene and root.get_node_or_null("RestartTransition") == transition, "Scene should reload while the wind remains visible.")
 	if current_scene == null or current_scene == scene:
-		flash.queue_free()
+		transition.queue_free()
 		scene.free()
 		current_scene = null
 		return
 	var restarted = current_scene.get_node("CardManager").state
-	_check(reload_progress.size() == 1 and is_equal_approx(reload_progress[0], 1.0), "Scene should reload at full black coverage.")
-	_check(flash.progress > 0.8, "Fade should still cover most of the scene just after reload.")
+	_check(not (current_scene.get_node("ElephantSound") as AudioStreamPlayer2D).playing, "Restart should not replay the elephant sound.")
+	_check(reload_progress.size() == 1 and is_equal_approx(reload_progress[0], 1.0), "Scene should reload at full wind coverage.")
+	_check(transition.wind_material.get_shader_parameter("transition_mode") == 2 and transition.progress < 0.2, "Wind should start revealing the new scene after reload.")
 	_check(restarted.board[0][0].current_hp == 10 and restarted.player.hand.size() == 4 and restarted.damage_bonus == 0, "Restart should restore the starting state.")
 	var restarted_scene := current_scene
-	var closing_progress: float = flash.progress
+	var reveal_progress: float = transition.progress
 	Input.parse_input_event(event)
 	await create_timer(0.15).timeout
-	progress = flash.progress
-	_check(progress > 0.0 and progress < closing_progress and current_scene == restarted_scene, "Fade should disappear and block another restart.")
-	await create_timer(0.6).timeout
-	_check(root.get_node_or_null("RestartFlash") == null, "Fade should be removed after disappearing.")
+	progress = transition.progress
+	_check(progress > reveal_progress and progress < 1.0 and current_scene == restarted_scene, "Wind should reveal the game and block another restart.")
+	await create_timer(1.1).timeout
+	_check(root.get_node_or_null("RestartTransition") == null, "Wind overlay should be removed after revealing the game.")
 	_check(restarted.damage_bonus == 0 and old_state.damage_bonus == 0, "Pending effects should not resolve after restart.")
-	current_scene.free()
+	if is_instance_valid(gust_audio) and gust_audio.playing:
+		_check(gust_audio.get_parent() == root, "The gust should keep playing without blocking the restarted game.")
+		await gust_audio.finished
+		await process_frame
+		_check(not is_instance_valid(gust_audio), "The gust should be removed after finishing.")
+	current_scene.get_node("CardManager")._input(event)
+	await create_timer(1.3).timeout
+	_check(current_scene != null and current_scene != restarted_scene, "A subsequent restart should reload the game.")
+	if current_scene != null and current_scene != restarted_scene:
+		_check(not (current_scene.get_node("ElephantSound") as AudioStreamPlayer2D).playing, "Subsequent restarts should not replay the elephant sound.")
+	await create_timer(1.3).timeout
+	if current_scene != null:
+		current_scene.free()
 	current_scene = null
+
+func _test_preview_spawn() -> void:
+	var scene: Node = load("res://game/main.tscn").instantiate()
+	root.add_child(scene)
+	var manager = scene.get_node("CardManager")
+	var tooltip = scene.get_node("HUD/CardTooltip")
+	var axe: Node2D = manager.hand_layout.cards[0]
+	var spear: Node2D = manager.hand_layout.cards[1]
+	_motion(manager, axe.get_global_transform_with_canvas() * Vector2.ZERO)
+	await create_timer(0.35).timeout
+	var progress: float = tooltip.spawn_material.get_shader_parameter("spawn_progress")
+	_check(tooltip.visible and progress > 0.0 and progress < 1.0 and tooltip.preview.name_label.modulate.a > 0.0 and tooltip.preview.name_label.modulate.a < 1.0 and is_equal_approx(tooltip.preview.modulate.a, 1.0), "Wind should reveal the card while its labels fade in independently.")
+	tooltip.refresh()
+	_check(is_equal_approx(tooltip.spawn_material.get_shader_parameter("spawn_progress"), progress), "Refreshing a preview should not restart its spawn animation.")
+	_motion(manager, spear.get_global_transform_with_canvas() * Vector2.ZERO)
+	_check(not tooltip.visible and tooltip.preview.visible and tooltip.preview_disappearing, "Changing cards should hide the description and start the wind disappearance.")
+	await create_timer(0.1).timeout
+	var vanishing_progress: float = tooltip.spawn_material.get_shader_parameter("spawn_progress")
+	_check(vanishing_progress < progress and vanishing_progress > 0.0, "Wind should gradually remove the previous preview.")
+	await create_timer(0.25).timeout
+	progress = tooltip.spawn_material.get_shader_parameter("spawn_progress")
+	_check(tooltip.visible and tooltip.preview.data == spear.data and progress > 0.0 and progress < 1.0, "The next card should begin a new spawn animation.")
+	await create_timer(0.65).timeout
+	_check(is_equal_approx(tooltip.spawn_material.get_shader_parameter("spawn_progress"), 1.0) and is_equal_approx(tooltip.preview.name_label.modulate.a, 1.0), "The spawn animation should finish with the card fully visible.")
+	_motion(manager, Vector2.ZERO)
+	_check(not tooltip.visible and tooltip.preview.visible, "Leaving the card should hide the description while the preview disappears.")
+	await create_timer(0.15).timeout
+	progress = tooltip.spawn_material.get_shader_parameter("spawn_progress")
+	_check(progress > 0.0 and progress < 1.0, "The preview should vanish gradually in the wind.")
+	await create_timer(0.25).timeout
+	_check(not tooltip.preview.visible and is_equal_approx(tooltip.spawn_material.get_shader_parameter("spawn_progress"), 0.0), "The preview should be hidden after the wind clears it.")
+	scene.free()
 
 func _test_tooltips() -> void:
 	var scene: Node = load("res://game/main.tscn").instantiate()
 	root.add_child(scene)
 	var manager := scene.get_node("CardManager") as Node2D
 	var tooltip = scene.get_node("HUD/CardTooltip")
-	var text := tooltip.get_node("Margin/Text") as RichTextLabel
+	var name_label := tooltip.get_node("Margin/Sections/Name") as Label
+	var text := tooltip.get_node("Margin/Sections/Text") as RichTextLabel
+	var bonus_label := tooltip.get_node("Margin/Sections/Bonus") as RichTextLabel
 	var axe: Node2D = manager.hand_layout.cards[0]
 	var spear: Node2D = manager.hand_layout.cards[1]
 	var magic: Node2D = manager.hand_layout.cards[2]
@@ -1009,16 +1132,23 @@ func _test_tooltips() -> void:
 	await create_timer(0.2).timeout
 	_check(not tooltip.visible, "Changing cards should restart the tooltip delay.")
 	await create_timer(0.15).timeout
-	_check(tooltip.visible and text.text.contains("Lança"), "Hovering a hand card should show its tooltip after the delay.")
+	_check(tooltip.visible and name_label.text == "Lança", "Hovering a hand card should show its tooltip after the delay.")
+	await process_frame
+	await process_frame
+	_check(text.get_global_rect().position.y - name_label.get_global_rect().end.y >= 12.0 and not bonus_label.visible, "The name and effect should have visible spacing without an empty bonus section.")
 	_check(text.text.contains("]1[/color] de dano a um inimigo se esta carta estiver na linha 3") and text.text.contains("]2[/color] na linha 4"), "Spear tooltip should show both row damage values and identify the attacking card's row.")
-	var sprite := spear.get_node("Sprite2D") as Sprite2D
-	var sprite_rect := sprite.get_rect()
-	var sprite_transform := sprite.get_global_transform_with_canvas()
-	var left := minf(
-		minf((sprite_transform * sprite_rect.position).x, (sprite_transform * Vector2(sprite_rect.end.x, sprite_rect.position.y)).x),
-		minf((sprite_transform * sprite_rect.end).x, (sprite_transform * Vector2(sprite_rect.position.x, sprite_rect.end.y)).x)
-	)
-	_check(tooltip.get_global_rect().end.x <= left and tooltip.size.x < 300.0, "Tooltip should be smaller and appear to the left of the rotated card.")
+	var preview = tooltip.preview
+	var board_right: float = (manager.get_global_transform_with_canvas() * (manager.board.cell_position(Vector2i(3, 0)) + Vector2(manager.board.cell_size.x / 2.0, 0))).x
+	var preview_size: Vector2 = preview.sprite.get_rect().size * preview.sprite.scale.abs() * preview.scale.abs()
+	var preview_top: Vector2 = preview.get_global_transform_with_canvas().origin - preview_size / 2.0
+	_check(preview.data == spear.data and preview.sprite.texture == spear.sprite.texture and preview.scale.x > 1.0, "Preview should show a larger copy of the hovered card.")
+	_check(preview_top.x >= board_right and preview_top.y + preview_size.y <= tooltip.get_global_rect().position.y, "Preview should appear to the right of the grid with the description below it.")
+	var original_position: Vector2 = tooltip.position
+	tooltip.preview_offset += Vector2(12, 14)
+	await process_frame
+	await process_frame
+	_check(tooltip.position.is_equal_approx(original_position + Vector2(12, 14)), "Preview offset should move the card and description together.")
+	tooltip.preview_offset -= Vector2(12, 14)
 
 	var original_description := Text.get_text("tooltip_spear")
 	Text.config.set_value("text", "tooltip_spear", "Dano editado: %s / %s.")
@@ -1031,11 +1161,19 @@ func _test_tooltips() -> void:
 	manager.state.changed.emit()
 	await process_frame
 	await process_frame
-	_check(text.text.contains("]3[/color] de dano") and text.text.contains("]4[/color] na linha 4") and text.text.contains("Bônus de magia"), "An open tooltip should update damage and bonus when Magic changes.")
+	_check(text.text.contains("]3[/color] de dano") and text.text.contains("]4[/color] na linha 4") and bonus_label.text.contains("Bônus de magia"), "An open tooltip should update damage and bonus when Magic changes.")
+	_check(bonus_label.visible and bonus_label.get_global_rect().position.y - text.get_global_rect().end.y >= 12.0, "The bonus should be visibly separated from the effect.")
+	var original_bonus := Text.get_text("tooltip_bonus")
+	Text.config.set_value("text", "tooltip_bonus", "Bônus editado: +%s.")
+	tooltip.refresh()
+	_check(bonus_label.text.begins_with("Bônus editado:"), "The bonus should use editable text without depending on a leading newline.")
+	Text.config.set_value("text", "tooltip_bonus", original_bonus)
+	tooltip.refresh()
+	_check(preview.damage_bonus == 2 and preview.bonus_label.text == spear.bonus_label.text, "Preview should update the displayed damage bonus.")
 	_check(text.get_content_height() <= text.size.y, "Tooltip text must fit without clipping.")
-	_check(tooltip._description(axe.data, 2).contains("]6[/color] de dano") and tooltip._description(axe.data, 2).contains("]4[/color] na linha 4"), "Axe tooltip should include its bonus on both rows.")
-	_check(tooltip._description(trap.data, 2).contains("]7[/color] de dano"), "Trap tooltip should include the active bonus.")
-	_check(tooltip._description(magic.data, 2).contains("incluindo Armadilha") and tooltip._description(magic.data, 2).contains("acumulam esse bônus"), "Magic tooltip should explain trap bonuses and stacking.")
+	_check(tooltip._effect_description(axe.data, 2).contains("]6[/color] de dano") and tooltip._effect_description(axe.data, 2).contains("]4[/color] na linha 4"), "Axe tooltip should include its bonus on both rows.")
+	_check(tooltip._effect_description(trap.data, 2).contains("]7[/color] de dano"), "Trap tooltip should include the active bonus.")
+	_check(tooltip._effect_description(magic.data, 2).contains("incluindo Armadilha") and tooltip._effect_description(magic.data, 2).contains("acumulam esse bônus"), "Magic tooltip should explain trap bonuses and stacking.")
 
 	manager.state.damage_bonus = 100
 	manager.state.changed.emit()
@@ -1053,21 +1191,25 @@ func _test_tooltips() -> void:
 
 	_motion(manager, enemy.get_global_transform_with_canvas() * Vector2.ZERO)
 	await create_timer(0.35).timeout
-	_check(tooltip.visible and text.text.contains("Elefante") and text.text.contains("]10[/color]"), "Board tooltip should show the enemy's current HP.")
+	_check(tooltip.visible and name_label.text == "Elefante" and text.text.contains("]10[/color]") and not bonus_label.visible, "Board tooltip should show the enemy's current HP without a bonus section.")
+	_check(preview.data == enemy.data and preview.sprite.texture == enemy.sprite.texture, "Preview should switch to the hovered board card.")
 	manager.state.set_card_hp(enemy.data, 7)
 	_check(text.text.contains("]7[/color]"), "An open enemy tooltip should update its HP.")
+	_check(preview.hp_label.text == enemy.hp_label.text, "Preview should update the enemy's HP.")
 	manager.position = Vector2(-450, -100)
 	await process_frame
 	var bounds: Rect2 = root.get_visible_rect()
 	var tooltip_rect: Rect2 = tooltip.get_global_rect()
 	_check(tooltip_rect.position.x >= bounds.position.x and tooltip_rect.position.y >= bounds.position.y and tooltip_rect.end.x <= bounds.end.x and tooltip_rect.end.y <= bounds.end.y, "Tooltip should stay inside the viewport near the top-left edge.")
-	var enemy_sprite := enemy.get_node("Sprite2D") as Sprite2D
-	var enemy_right := (enemy_sprite.get_global_transform_with_canvas() * enemy_sprite.get_rect().end).x
-	_check(tooltip_rect.position.x >= enemy_right, "Tooltip should move to the right when the left side has no room.")
+	preview_size = preview.sprite.get_rect().size * preview.sprite.scale.abs() * preview.scale.abs()
+	preview_top = preview.get_global_transform_with_canvas().origin - preview_size / 2.0
+	_check(preview_top.x >= bounds.position.x and preview_top.y >= bounds.position.y, "Preview should stay visible near the top-left edge.")
 	manager.position = Vector2(700, 500)
 	await process_frame
 	tooltip_rect = tooltip.get_global_rect()
 	_check(tooltip_rect.position.x >= bounds.position.x and tooltip_rect.position.y >= bounds.position.y and tooltip_rect.end.x <= bounds.end.x and tooltip_rect.end.y <= bounds.end.y, "Tooltip should stay inside the viewport near the bottom-right edge.")
+	preview_top = preview.get_global_transform_with_canvas().origin - preview_size / 2.0
+	_check(preview_top.x + preview_size.x <= bounds.end.x and preview_top.y + preview_size.y <= tooltip_rect.position.y, "Preview should stay visible above the description near the bottom-right edge.")
 	manager.state.set_card_hp(enemy.data, 0)
 	_check(not tooltip.visible and tooltip.hovered_card == null, "Removing a hovered card should hide its tooltip.")
 	_motion(manager, Vector2.ZERO)
@@ -1092,7 +1234,7 @@ func _run() -> void:
 	_test_end_state()
 	_test_row_highlight()
 	await _test_row_penalty_badges()
-	_test_elephant_water_material()
+	_test_card_hover_and_foil()
 	await _test_card_drop_sound()
 	await _test_axe_attack_sound()
 	await _test_spear_attack_sound()
@@ -1102,6 +1244,7 @@ func _run() -> void:
 	await _test_screen_effects()
 	await _test_card_movement()
 	await _test_targeting_effects()
+	await _test_preview_spawn()
 	await _test_tooltips()
 	await _test_ui()
 	await _test_end_screens()
