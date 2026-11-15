@@ -13,9 +13,11 @@
 [ext_resource type="Script" uid="uid://rfc3lt3f4sb3" path="res://game/end_screen.gd" id="9_end_screen"]
 [ext_resource type="Shader" uid="uid://bpjbgoenj8qpt" path="res://game/field_mist.gdshader" id="10_field_mist"]
 [ext_resource type="AudioStream" path="res://assets/audio/stomp.mp3" id="11_trap_sound"]
+[ext_resource type="Texture2D" path="res://assets/savannah-soil.jpg" id="12_soil"]
 
 [sub_resource type="ShaderMaterial" id="FieldMistMaterial"]
 shader = ExtResource("10_field_mist")
+shader_parameter/soil_texture = ExtResource("12_soil")
 
 [sub_resource type="StyleBoxFlat" id="TooltipStyle"]
 bg_color = Color(0.1, 0.09, 0.12, 0.98)

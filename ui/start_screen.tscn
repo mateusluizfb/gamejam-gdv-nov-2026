@@ -8,15 +8,26 @@
 [ext_resource type="AudioStream" uid="uid://ud7twmjxn37a" path="res://assets/audio/wind-blowing.mp3" id="6_wind"]
 [ext_resource type="AudioStream" uid="uid://catknpw0p3vvh" path="res://assets/audio/small-wind.mp3" id="7_gust"]
 [ext_resource type="Texture2D" uid="uid://dltmx2066psic" path="res://assets/elefantes.png" id="8_elephants"]
+[ext_resource type="Shader" uid="uid://c4lth1gx5n6m3" path="res://ui/menu_mist.gdshader" id="8_menu_mist"]
 [ext_resource type="Shader" uid="uid://qx7tp2p5j8vf" path="res://ui/elephant_button.gdshader" id="9_elephant_shader"]
-[ext_resource type="Shader" path="res://ui/menu_mist.gdshader" id="8_menu_mist"]
-[ext_resource type="Shader" path="res://cards/continuous_aura.gdshader" id="10_aura"]
+[ext_resource type="Shader" uid="uid://be1otess3cmxm" path="res://cards/continuous_aura.gdshader" id="10_aura"]
 
 [sub_resource type="ShaderMaterial" id="ElephantButtonMaterial"]
 resource_local_to_scene = true
 shader = ExtResource("9_elephant_shader")
 shader_parameter/button_center = Vector2(0, 0)
 shader_parameter/highlight = 0.0
+
+[sub_resource type="ShaderMaterial" id="ButtonAuraMaterial"]
+resource_local_to_scene = true
+shader = ExtResource("10_aura")
+shader_parameter/shape_size = Vector2(0, 0)
+shader_parameter/aura_size = Vector2(0, 0)
+shader_parameter/round_shape = true
+
+[sub_resource type="ShaderMaterial" id="MenuMistMaterial"]
+resource_local_to_scene = true
+shader = ExtResource("8_menu_mist")
 
 [sub_resource type="ShaderMaterial" id="OpeningMaterial"]
 resource_local_to_scene = true
@@ -31,15 +42,6 @@ shader = ExtResource("4_intro")
 shader_parameter/wind_progress = 0.0
 shader_parameter/transition_mode = 0
 shader_parameter/transition_progress = 0.0
-
-[sub_resource type="ShaderMaterial" id="MenuMistMaterial"]
-resource_local_to_scene = true
-shader = ExtResource("8_menu_mist")
-
-[sub_resource type="ShaderMaterial" id="ButtonAuraMaterial"]
-resource_local_to_scene = true
-shader = ExtResource("10_aura")
-shader_parameter/round_shape = true
 
 [node name="Control" type="Control" unique_id=75429410]
 layout_mode = 3
@@ -87,10 +89,10 @@ texture_normal = ExtResource("8_elephants")
 ignore_texture_size = true
 stretch_mode = 5
 
-[node name="Aura" type="ColorRect" parent="Button"]
+[node name="Aura" type="ColorRect" parent="Button" unique_id=611928353]
+modulate = Color(1, 1, 1, 0)
 show_behind_parent = true
 material = SubResource("ButtonAuraMaterial")
-modulate = Color(1, 1, 1, 0)
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -111,10 +113,10 @@ stream = ExtResource("3_nledq")
 stream = ExtResource("6_wind")
 autoplay = true
 
-[node name="Mist" type="CanvasLayer" parent="."]
+[node name="Mist" type="CanvasLayer" parent="." unique_id=1404681251]
 layer = 52
 
-[node name="Background" type="ColorRect" parent="Mist"]
+[node name="Background" type="ColorRect" parent="Mist" unique_id=1651704895]
 visible = false
 material = SubResource("MenuMistMaterial")
 anchors_preset = 15
@@ -184,9 +186,9 @@ theme_override_font_sizes/normal_font_size = 34
 theme_override_font_sizes/italics_font_size = 34
 bbcode_enabled = true
 scroll_active = false
+autowrap_mode = 2
 horizontal_alignment = 1
 vertical_alignment = 1
-autowrap_mode = 2
 
 [node name="Prompt" type="Label" parent="Intro" unique_id=1476968065]
 modulate = Color(1, 1, 1, 0)

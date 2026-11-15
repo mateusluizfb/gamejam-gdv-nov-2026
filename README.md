@@ -10,7 +10,7 @@ Uma prévia ampliada aparece e desaparece em uma animação de vento, com a desc
 
 Os textos exibidos no jogo podem ser editados em `data/text.cfg`.
 Nos parágrafos da história, use `[i]texto[/i]` para itálico.
-O arquivo é incluído no pacote da exportação Web; exporte o jogo novamente após alterar os textos.
+O arquivo é incluído nos pacotes das exportações Web e Windows; exporte o jogo novamente após alterar os textos.
 
 https://willosuna.itch.io/pixel-cards-deckbuilder-kit-lite
 https://pixabay.com/music/solo-instruments-african-drums-209632/

@@ -225,6 +225,13 @@ func _escape(manager: Node) -> void:
 	event.pressed = true
 	manager._input(event)
 
+func _test_field_background() -> void:
+	var scene: Node = load("res://game/main.tscn").instantiate()
+	var background := scene.get_node("Sprite2D") as Sprite2D
+	var material := background.material as ShaderMaterial
+	_check(material.get_shader_parameter("soil_texture") == load("res://assets/savannah-soil.jpg"), "The field shader should use the supplied soil texture.")
+	scene.free()
+
 func _test_row_highlight() -> void:
 	var scene: Node = load("res://game/main.tscn").instantiate()
 	var hand_node := scene.get_node("CardManager/Hand") as Node2D
@@ -1245,6 +1252,7 @@ func _test_tooltips() -> void:
 	scene.free()
 
 func _run() -> void:
+	_test_field_background()
 	_test_effects()
 	_test_cancellation_and_rows()
 	_test_trap_bonus_and_full_row()
