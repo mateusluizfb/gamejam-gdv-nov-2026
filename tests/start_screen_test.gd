@@ -33,6 +33,12 @@ func _run() -> void:
 	var opening_background := opening.get_node("Background") as ColorRect
 	var opening_prompt := opening.get_node("Prompt") as Label
 	var opening_material := opening_background.material as ShaderMaterial
+	var font_path := "res://assets/fonts/Macondo-Regular.ttf"
+	_check(button.get_theme_font("font").resource_path == font_path and opening_prompt.get_theme_font("font").resource_path == font_path, "Project theme should apply the main font to buttons and labels.")
+	var dynamic_label := Label.new()
+	scene.add_child(dynamic_label)
+	_check(dynamic_label.get_theme_font("font").resource_path == font_path, "Dynamically created controls should use the main font.")
+	dynamic_label.free()
 	var wind_audio := scene.get_node("WindAudio") as AudioStreamPlayer
 	var menu_audio := scene.get_node("AudioStreamPlayer2D") as AudioStreamPlayer2D
 	var gust_audio := intro.get_node("GustAudio") as AudioStreamPlayer

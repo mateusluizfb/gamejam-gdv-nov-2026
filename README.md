@@ -15,3 +15,4 @@ https://lentikula.itch.io/healing-spell-impacts
 https://pixabay.com/pt/sound-effects/filme-e-efeitos-especiais-arrow-swish-03-306040/
 https://pixabay.com/sound-effects/film-special-effects-sfx29-wind-by-wind-gust-338387/
 https://pixabay.com/sound-effects/nature-wind-blowing-457954/
+https://raw.githubusercontent.com/google/fonts/main/ofl/macondo/Macondo-Regular.ttf
