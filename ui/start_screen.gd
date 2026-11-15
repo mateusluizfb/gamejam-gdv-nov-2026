@@ -75,7 +75,7 @@ func _update_button_center() -> void:
 	button_aura.offset_right = padding.x
 	button_aura.offset_bottom = padding.y
 	aura_material.set_shader_parameter("shape_size", start_button.size)
-	aura_material.set_shader_parameter("aura_size", button_aura.size)
+	aura_material.set_shader_parameter("aura_size", start_button.size + padding * 2.0)
 
 func _update_button_highlight() -> void:
 	var highlighted := not start_button.disabled and (start_button.is_hovered() or start_button.has_focus())

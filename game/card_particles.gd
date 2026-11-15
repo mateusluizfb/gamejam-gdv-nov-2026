@@ -7,7 +7,7 @@ const DAMAGE_COLOR := Color(1.0, 0.28, 0.12, 0.8)
 const TRAP_COLOR := Color(0.75, 0.3, 1.0, 0.8)
 const MAGIC_BUFF_COLOR := Color(1.0, 0.12, 0.12, 0.9)
 const TARGET_COLOR := Color(0.7, 0.2, 1.0, 0.95)
-const PADDING := 27.0
+const PADDING := 27.0 # 22 pixels of glow plus up to 5 pixels of shimmer.
 
 static func aura_padding(shape_size: Vector2, round_shape: bool) -> Vector2:
 	if round_shape:

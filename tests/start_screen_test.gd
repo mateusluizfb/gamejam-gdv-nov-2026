@@ -38,10 +38,16 @@ func _run() -> void:
 	_check((button.material as ShaderMaterial).shader == load("res://ui/elephant_button.gdshader"), "The elephant button should use the glow shader.")
 	_check(button.mouse_default_cursor_shape == Control.CURSOR_POINTING_HAND, "The menu button should use the pointing hand cursor.")
 	_check(aura_material.shader == load("res://cards/continuous_aura.gdshader") and aura.mouse_filter == Control.MOUSE_FILTER_IGNORE and aura.show_behind_parent, "The button aura should use the card aura shader without blocking input.")
-	_check(aura_material.get_shader_parameter("shape_size") == button.size and aura_material.get_shader_parameter("aura_size") == aura.size, "The aura shader should match the button and aura sizes.")
+	_check(aura_material.get_shader_parameter("shape_size") == button.size and (aura_material.get_shader_parameter("aura_size") as Vector2).is_equal_approx(aura.size), "The aura shader should match the button and aura sizes.")
 	var aura_padding := (aura.size - button.size) * 0.5
 	var shortest_side := minf(button.size.x, button.size.y)
 	_check(aura_padding.x * shortest_side / button.size.x >= 26.99 and aura_padding.y * shortest_side / button.size.y >= 26.99, "The elliptical aura should have enough padding to fade on both axes.")
+	var original_size := button.size
+	button.size = Vector2(400, 100)
+	await process_frame
+	_check((aura_material.get_shader_parameter("aura_size") as Vector2).is_equal_approx(aura.size) and (aura.size.x - button.size.x) * 0.5 >= 107.99, "Resizing a wide button should update the aura size and horizontal padding.")
+	button.size = original_size
+	await process_frame
 	var opening := scene.get_node("Opening") as CanvasLayer
 	var opening_background := opening.get_node("Background") as ColorRect
 	var opening_prompt := opening.get_node("Prompt") as Label
