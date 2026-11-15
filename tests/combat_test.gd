@@ -229,7 +229,22 @@ func _test_field_background() -> void:
 	var scene: Node = load("res://game/main.tscn").instantiate()
 	var background := scene.get_node("Sprite2D") as Sprite2D
 	var material := background.material as ShaderMaterial
-	_check(material.get_shader_parameter("soil_texture") == load("res://assets/savannah-soil.jpg"), "The field shader should use the supplied soil texture.")
+	_check(material.shader == load("res://game/field_mist.gdshader"), "The field should use the procedural soil shader.")
+	for uniform in material.shader.get_shader_uniform_list():
+		_check(uniform.type != TYPE_OBJECT, "The procedural soil should not require an image texture.")
+	scene.free()
+
+func _test_board_size() -> void:
+	var scene: Node = load("res://game/main.tscn").instantiate()
+	root.add_child(scene)
+	var manager := scene.get_node("CardManager") as Node2D
+	var board = manager.board
+	var grid := Rect2(board.origin - board.cell_size * 0.5, board.cell_size * 4.0)
+	var interior := Rect2(171, 41, 940, 470)
+	_check(board.cell_size.is_equal_approx(Vector2(112.75, 127.5) * 0.9), "The board cells should be 10% smaller.")
+	_check(interior.encloses(grid), "The whole grid should fit inside the background's black outline.")
+	var enemy: Node2D = board.cards[0][0]
+	_check(enemy.scale.is_equal_approx(Vector2.ONE * 0.81), "Board cards should shrink with the grid.")
 	scene.free()
 
 func _test_row_highlight() -> void:
@@ -341,11 +356,11 @@ func _test_card_hover_and_foil() -> void:
 	_check(material.get_shader_parameter("cursor_uv").is_equal_approx(Vector2(0.7, 0.3)), "Moving over a card should update its foil position.")
 	_motion(manager, second.get_global_transform_with_canvas() * Vector2.ZERO)
 	_check(first.scale.is_equal_approx(Vector2(0.8, 1.1)) and first.z_index == 3 and is_zero_approx(material.get_shader_parameter("foil_strength")), "Switching board cards should restore the first card and disable its foil.")
-	_check(second.scale.is_equal_approx(Vector2.ONE * 0.9 * 1.25), "The next board card should enlarge.")
+	_check(second.scale.is_equal_approx(Vector2.ONE * 0.81 * 1.25), "The next board card should enlarge.")
 	var hand_card: Node2D = manager.hand_layout.cards[0]
 	_motion(manager, hand_card.get_global_transform_with_canvas() * Vector2.ZERO)
 	var hand_material := hand_card.get_node("Sprite2D").material as ShaderMaterial
-	_check(second.scale.is_equal_approx(Vector2.ONE * 0.9) and hand_material.get_shader_parameter("foil_strength") == 1.0, "Hand cards should receive foil while preserving their existing hover behavior.")
+	_check(second.scale.is_equal_approx(Vector2.ONE * 0.81) and hand_material.get_shader_parameter("foil_strength") == 1.0, "Hand cards should receive foil while preserving their existing hover behavior.")
 	var old_uv: Vector2 = hand_material.get_shader_parameter("cursor_uv")
 	hand_card._set_movement_position(hand_card.position + Vector2(0, 5))
 	_check(not hand_material.get_shader_parameter("cursor_uv").is_equal_approx(old_uv), "Foil should track a stationary cursor as the hovered card moves.")
@@ -359,7 +374,7 @@ func _test_card_hover_and_foil() -> void:
 	hand_card.stop_moving()
 	hand_card.position = manager.board.cell_position(Vector2i(0, 2))
 	_motion(manager, hand_card.get_global_transform_with_canvas() * Vector2.ZERO)
-	_check(hand_card.scale.is_equal_approx(Vector2.ONE * 0.9 * 1.25) and hand_material.get_shader_parameter("foil_strength") == 1.0, "A played card should enlarge and show foil on the board, including while targeting.")
+	_check(hand_card.scale.is_equal_approx(Vector2.ONE * 0.81 * 1.25) and hand_material.get_shader_parameter("foil_strength") == 1.0, "A played card should enlarge and show foil on the board, including while targeting.")
 	manager.state.cancel_play()
 	_check(hand_card.scale.is_equal_approx(Vector2.ONE * 0.9) and is_zero_approx(hand_material.get_shader_parameter("foil_strength")), "Returning a hovered board card to the hand should restore its transform and foil.")
 	_motion(manager, first.get_global_transform_with_canvas() * Vector2.ZERO)
@@ -1255,6 +1270,7 @@ func _test_tooltips() -> void:
 
 func _run() -> void:
 	_test_field_background()
+	_test_board_size()
 	_test_effects()
 	_test_cancellation_and_rows()
 	_test_trap_bonus_and_full_row()

@@ -12,12 +12,11 @@
 [ext_resource type="Script" uid="uid://cn2l046w0psxp" path="res://game/screen_effects.gd" id="8_screen_effects"]
 [ext_resource type="Script" uid="uid://rfc3lt3f4sb3" path="res://game/end_screen.gd" id="9_end_screen"]
 [ext_resource type="Shader" uid="uid://bpjbgoenj8qpt" path="res://game/field_mist.gdshader" id="10_field_mist"]
-[ext_resource type="AudioStream" path="res://assets/audio/stomp.mp3" id="11_trap_sound"]
-[ext_resource type="Texture2D" path="res://assets/savannah-soil.jpg" id="12_soil"]
+[ext_resource type="AudioStream" uid="uid://gn24bx3tlpa8" path="res://assets/audio/stomp.mp3" id="11_trap_sound"]
 
 [sub_resource type="ShaderMaterial" id="FieldMistMaterial"]
 shader = ExtResource("10_field_mist")
-shader_parameter/soil_texture = ExtResource("12_soil")
+shader_parameter/board_bounds = Vector4(0.1328125, 0.05555556, 0.8671875, 0.7083333)
 
 [sub_resource type="StyleBoxFlat" id="TooltipStyle"]
 bg_color = Color(0.1, 0.09, 0.12, 0.98)
@@ -64,7 +63,7 @@ stream = ExtResource("7_spear_attack")
 [node name="MagicEntrySound" type="AudioStreamPlayer" parent="CardManager" unique_id=1268555271]
 stream = ExtResource("6_magic_entry")
 
-[node name="TrapSound" type="AudioStreamPlayer" parent="CardManager"]
+[node name="TrapSound" type="AudioStreamPlayer" parent="CardManager" unique_id=740156972]
 stream = ExtResource("11_trap_sound")
 
 [node name="HUD" type="CanvasLayer" parent="." unique_id=1206513264]

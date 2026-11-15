@@ -16,7 +16,8 @@ const Text = preload("res://data/text.gd")
 const CARD_SCENE: PackedScene = preload("res://cards/card.tscn")
 const MAGIC_BURN_SHADER: Shader = preload("res://cards/magic_burn.gdshader")
 const STARTING_DATA_PATH := "res://starting_cards.csv"
-const GRID_ORIGIN := Vector2(450, 100)
+const GRID_ORIGIN := Vector2(467, 104)
+const GRID_SCALE := 0.9
 const HAND_GAP := 40.0
 const EFFECT_DELAY := 0.5
 const MAGIC_BURN_DURATION := 0.6
@@ -126,11 +127,13 @@ func _get_cell_size(records: Array) -> Vector2:
 		max_texture_size = max_texture_size.max(texture.get_size())
 	var size := max_texture_size * sprite.scale.abs() * sample_card.scale.abs() + Vector2(Board.COLUMN_GAP, Board.ROW_GAP)
 	sample_card.free()
-	return size
+	return size * GRID_SCALE
 
 func _new_card_view(card: CardData) -> Node2D:
 	var view := CARD_SCENE.instantiate()
 	view.data = card
+	if card.board_position != null:
+		view.scale *= GRID_SCALE
 	view.connect("movement_updated", _on_card_movement.bind(view))
 	card_views[card] = view
 	return view
@@ -221,6 +224,7 @@ func _place_card_view(card: CardData, cell: Vector2i) -> void:
 	if not board.try_add_card(view, board.cell_position(cell)):
 		push_error("Card view could not follow a successful board play.")
 		return
+	view.scale *= GRID_SCALE
 	hand_layout.remove_card(view)
 	hand_layout.place_cards()
 	if card.type == CardData.Type.MAGIC:
