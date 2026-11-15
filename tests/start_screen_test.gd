@@ -54,7 +54,29 @@ func _run() -> void:
 	_check(scene.opening_state == scene.OpeningState.WAITING and not intro.visible, "Only a fresh Space press should dismiss the opening, and the menu must be blocked.")
 	_check(wind_audio.playing and not menu_audio.playing and not gust_audio.playing, "Other keys should not change the opening audio.")
 	root.push_input(_key(KEY_SPACE))
-	_check(not wind_audio.playing and menu_audio.playing, "Space should immediately switch from wind to menu music.")
+	var opening_story = scene.get_node("StoryScreen")
+	_check(scene.opening_state == scene.OpeningState.STORY and opening_story.label.text == "placeholder paragraph 1", "Space should open the first paragraph on the black screen.")
+	_check(opening_story.prompt.visible and opening_story.prompt.text == "Aperte ESPACO para continuar" and opening_story.prompt.anchor_top == 1.0, "The opening story should show a bottom Space hint.")
+	_check((opening_story.get_child(0) as ColorRect).color == Color.BLACK and opening_story.text_material.shader == load("res://ui/card_preview_spawn.gdshader"), "The story should use a black background and the card preview shader.")
+	_check(wind_audio.playing and not menu_audio.playing and not mist.visible, "The menu should remain hidden during the opening story.")
+	root.push_input(_key(KEY_SPACE))
+	await create_timer(0.3).timeout
+	_check(opening_story.background.modulate.a > 0.0 and opening_story.background.modulate.a < 1.0 and opening_prompt.modulate.a > 0.0 and opening_prompt.modulate.a < 1.0, "The opening should blend into the story instead of cutting to black.")
+	await create_timer(1.0).timeout
+	_check(opening_story.paragraph_index == 0, "Space during the reveal should not skip a paragraph.")
+	_check(is_zero_approx(opening_prompt.modulate.a) and is_equal_approx(opening_story.background.modulate.a, 1.0), "The initial prompt should be gone once the story is visible.")
+	root.push_input(_key(KEY_ENTER))
+	root.push_input(_key(KEY_SPACE, true))
+	_check(opening_story.paragraph_index == 0, "Other keys and repeated Space should not advance the story.")
+	for index in range(1, 3):
+		root.push_input(_key(KEY_SPACE))
+		await create_timer(1.0).timeout
+		_check(opening_story.paragraph_index == index and opening_story.label.text == "placeholder paragraph %d" % (index + 1), "Each Space should advance exactly one opening paragraph.")
+	root.push_input(_key(KEY_SPACE))
+	await create_timer(0.6).timeout
+	_check(scene.opening_state == scene.OpeningState.REVEALING and is_zero_approx(opening_prompt.modulate.a), "The initial prompt must not reappear when the story ends.")
+	_check(opening_story.background.modulate.a > 0.0 and opening_story.background.modulate.a < 1.0, "The story should fade out while the menu is revealed.")
+	_check(not wind_audio.playing and menu_audio.playing, "After the story, wind should switch to menu music.")
 	_check(mist.visible and mist.anchor_right == 1.0 and mist.anchor_bottom == 1.0 and mist.mouse_filter == Control.MOUSE_FILTER_IGNORE, "Mist should cover the screen after Space without blocking the menu.")
 	_check(mist_material.shader == load("res://ui/menu_mist.gdshader") and not mist.is_processing_input(), "The menu should use mist without reacting to mouse input.")
 	_check(gust_audio.playing and gust_audio.stream.resource_path == "res://assets/audio/small-wind.mp3" and not (gust_audio.stream as AudioStreamMP3).loop, "Space should play the one-shot gust sound.")

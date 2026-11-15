@@ -14,10 +14,12 @@ const ScreenEffects = preload("res://game/screen_effects.gd")
 const EndScreen = preload("res://game/end_screen.gd")
 const Text = preload("res://data/text.gd")
 const CARD_SCENE: PackedScene = preload("res://cards/card.tscn")
+const MAGIC_BURN_SHADER: Shader = preload("res://cards/magic_burn.gdshader")
 const STARTING_DATA_PATH := "res://starting_cards.csv"
 const GRID_ORIGIN := Vector2(450, 100)
 const HAND_GAP := 40.0
 const EFFECT_DELAY := 0.5
+const MAGIC_BURN_DURATION := 0.6
 const BOARD_HOVER_SCALE := 1.25
 
 var board: Board
@@ -181,7 +183,21 @@ func _remove_card_view(card: CardData) -> void:
 	if not board.remove_card(view, cell):
 		return
 	card_views.erase(card)
-	view.queue_free()
+	if card.type == CardData.Type.MAGIC and state.pending_card == card and state.phase == GameState.Phase.RESOLVING:
+		view.stop_moving()
+		view.position = board.cell_position(cell)
+		var material := ShaderMaterial.new()
+		material.shader = MAGIC_BURN_SHADER
+		material.set_shader_parameter("burn_progress", 0.0)
+		view.get_node("Sprite2D").material = material
+		var tween := view.create_tween().set_parallel(true)
+		tween.tween_property(material, "shader_parameter/burn_progress", 1.0, MAGIC_BURN_DURATION)
+		for child in view.get_children():
+			if child is Control:
+				tween.tween_property(child, "modulate:a", 0.0, MAGIC_BURN_DURATION)
+		tween.chain().tween_callback(view.queue_free)
+	else:
+		view.queue_free()
 
 func _place_card_view(card: CardData, cell: Vector2i) -> void:
 	var view: Node2D = card_views[card]

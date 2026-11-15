@@ -145,6 +145,7 @@ func resolve_effect(token: int) -> void:
 			damage_bonus += CardData.MAGIC_BONUS
 			magic_applied.emit()
 			message = Text.get_text("feedback_magic") % [CardData.MAGIC_BONUS, damage_bonus]
+			_remove_board_card(card)
 		CardData.Type.TRAP:
 			damage_bonus = 0
 			var row: int = card.board_position.y
