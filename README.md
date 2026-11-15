@@ -4,6 +4,8 @@ Jogue todas as cartas: se ainda houver inimigos, você perde. Ao derrotar o últ
 
 Na tela inicial, pressione espaço para dissipar a névoa. No menu, selecione "Novo jogo" e pressione espaço após a introdução para começar.
 
+Passe o cursor sobre as cartas para ver o efeito metalizado; cartas no tabuleiro também aumentam de tamanho.
+
 Os textos exibidos no jogo podem ser editados em `data/text.cfg`.
 
 https://willosuna.itch.io/pixel-cards-deckbuilder-kit-lite

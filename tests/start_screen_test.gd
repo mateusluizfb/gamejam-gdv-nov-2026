@@ -84,6 +84,8 @@ func _run() -> void:
 	_check(current_scene == scene and material.get_shader_parameter("transition_mode") == 1 and material.get_shader_parameter("transition_progress") > 0.0 and material.get_shader_parameter("transition_progress") < 1.0, "A gust should cover the intro before changing scenes.")
 	await create_timer(1.0).timeout
 	_check(current_scene != null and current_scene != scene and current_scene.get_node_or_null("CardManager") != null, "Space should load the main game.")
+	if current_scene != null and current_scene != scene:
+		_check((current_scene.get_node("ElephantSound") as AudioStreamPlayer2D).playing, "Entering the game from the menu should play the elephant sound.")
 	_check(is_instance_valid(intro) and intro.get_parent() == root and background.visible and material.get_shader_parameter("transition_mode") == 2 and material.get_shader_parameter("transition_progress") > 0.0 and material.get_shader_parameter("transition_progress") < 1.0, "Gust should sweep over the new scene as it reveals the game.")
 	_check(not story.visible and not prompt.visible, "The old intro text should not appear over the game.")
 	await create_timer(1.3).timeout
